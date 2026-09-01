@@ -1,0 +1,116 @@
+services:
+
+  nginx:
+    image: nginx:alpine
+    container_name: ${NGINX_CONTAINER_NAME}
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT}:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - php
+    networks:
+      - saaskit
+
+  php:
+    build:
+      context: ./docker/php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+        UID: ${HOST_UID} 
+        GID: ${HOST_GID}
+    container_name: ${PHP_CONTAINER_NAME}
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      APP_ENV: ${APP_ENV}
+      APP_DEBUG: ${APP_DEBUG}
+      APP_TIMEZONE: ${APP_TIMEZONE}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - saaskit
+
+  mariadb:
+    image: mariadb:11
+    container_name: ${MARIADB_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      TZ: ${APP_TIMEZONE}
+    ports:
+      - "${MARIADB_PORT}:3306"
+    volumes:
+      - saaskit-mariadb:/var/lib/mysql
+    networks:
+      - saaskit
+
+  redis:
+    image: redis:alpine
+    container_name: ${REDIS_CONTAINER_NAME}
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - saaskit-redis:/data
+    networks:
+      - saaskit
+
+  node:
+    image: node:${NODE_VERSION}-alpine
+    container_name: ${NODE_CONTAINER_NAME}
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "${NODE_PORT}:5173"
+    command:
+      - tail
+      - -f
+      - /dev/null
+    networks:
+      - saaskit
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: ${PHPMYADMIN_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      PMA_HOST: ${DB_HOST}
+      PMA_PORT: ${DB_PORT}
+      PMA_ARBITRARY: "0"
+    ports:
+      - "${PHPMYADMIN_PORT}:80"
+    depends_on:
+      - mariadb
+    networks:
+      - saaskit
+
+networks:
+  saaskit:
+    driver: bridge
+
+volumes:
+  saaskit-mariadb:
+  saaskit-redis:
