@@ -10,6 +10,7 @@ use App\Http\Requests\Api\Auth\RegisterRequest;
 use App\Http\Resources\Api\Auth\UserResource;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -59,6 +60,16 @@ class AuthController extends Controller
                 'token_type' => 'Bearer',
             ],
             message: 'Login successful.',
+        );
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return ApiResponse::success(
+            data: [
+                'user' => new UserResource($request->user()),
+            ],
+            message: 'Authenticated user retrieved successfully.',
         );
     }
 }
