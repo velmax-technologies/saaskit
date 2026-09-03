@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'password_reset_url' => env('PASSWORD_RESET_URL'),
+
 ];

@@ -96,8 +96,8 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
-            'throttle' => 60,
+            'expire' => (int) env('AUTH_PASSWORD_RESET_EXPIRE', 60),
+            'throttle' => (int) env('AUTH_PASSWORD_RESET_THROTTLE', 60),
         ],
     ],
 
@@ -117,6 +117,7 @@ return [
     'rate_limits' => [
         'login' => (int) env('AUTH_LOGIN_RATE_LIMIT', 5),
         'register' => (int) env('AUTH_REGISTER_RATE_LIMIT', 3),
+        'forgot_password' => (int) env('AUTH_FORGOT_PASSWORD_RATE_LIMIT', 3),
     ],
 
 ];

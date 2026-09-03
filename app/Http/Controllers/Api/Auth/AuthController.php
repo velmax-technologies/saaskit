@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Actions\Auth\CreateAccessToken;
 use App\Actions\Auth\LoginUser;
 use App\Actions\Auth\RegisterUser;
+use App\Actions\Auth\ResetUserPassword;
+use App\Actions\Auth\SendPasswordResetLink;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Requests\Api\Auth\RegisterRequest;
+use App\Http\Requests\Api\Auth\ResetPasswordRequest;
 use App\Http\Resources\Api\Auth\SessionResource;
 use App\Http\Resources\Api\Auth\UserResource;
 use App\Support\Api\ApiResponse;
@@ -136,6 +140,41 @@ class AuthController extends Controller
 
         return ApiResponse::success(
             message: 'Logged out successfully.',
+        );
+    }
+
+    public function forgotPassword(
+        ForgotPasswordRequest $request,
+        SendPasswordResetLink $sendPasswordResetLink,
+    ): JsonResponse {
+        $sendPasswordResetLink->execute(
+            email: $request->string('email')->toString(),
+        );
+
+        return ApiResponse::success(
+            message: 'If an account exists for that email address, a password reset link has been sent.',
+        );
+    }
+
+    public function resetPassword(
+        ResetPasswordRequest $request,
+        ResetUserPassword $resetUserPassword,
+    ): JsonResponse {
+        $reset = $resetUserPassword->execute(
+            email: $request->string('email')->toString(),
+            token: $request->string('token')->toString(),
+            password: $request->string('password')->toString(),
+        );
+
+        if (! $reset) {
+            return ApiResponse::error(
+                message: 'The password reset token is invalid or has expired.',
+                status: 422,
+            );
+        }
+
+        return ApiResponse::success(
+            message: 'Password reset successfully. Please log in again.',
         );
     }
 }
