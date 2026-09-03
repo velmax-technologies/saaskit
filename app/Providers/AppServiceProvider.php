@@ -74,7 +74,7 @@ class AppServiceProvider extends ServiceProvider
             return URL::temporarySignedRoute(
                 'verification.verify',
                 now()->addMinutes(
-                    config('auth.verification.expire', 60)
+                    config('auth.verification.expire')
                 ),
                 [
                     'publicId' => $notifiable->getRouteKey(),

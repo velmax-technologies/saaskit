@@ -3,7 +3,6 @@
 namespace Tests\Feature\Api\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -117,6 +116,6 @@ class RegistrationTest extends TestCase
     {
         parent::setUp();
 
-        RateLimiter::clear('auth-register');
+        $this->app['cache']->flush();
     }
 }
