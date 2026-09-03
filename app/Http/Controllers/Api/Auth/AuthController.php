@@ -72,4 +72,13 @@ class AuthController extends Controller
             message: 'Authenticated user retrieved successfully.',
         );
     }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()?->delete();
+
+        return ApiResponse::success(
+            message: 'Logged out successfully.',
+        );
+    }
 }
