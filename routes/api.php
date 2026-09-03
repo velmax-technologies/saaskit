@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\EmailVerificationController;
+use App\Http\Controllers\OrganizationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -14,6 +15,12 @@ Route::prefix('v1')->group(function (): void {
             ],
         ]);
     });
+
+    Route::middleware('auth:sanctum')
+        ->prefix('organizations')
+        ->group(function (): void {
+            Route::post('/', [OrganizationController::class, 'store']);
+        });
 
     Route::prefix('auth')->group(function (): void {
         Route::post('/register', [AuthController::class, 'register'])
