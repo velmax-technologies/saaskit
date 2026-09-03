@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Actions\Auth\CreateAccessToken;
 use App\Actions\Auth\LoginUser;
 use App\Actions\Auth\RegisterUser;
 use App\Http\Controllers\Controller;
@@ -43,13 +44,15 @@ class AuthController extends Controller
     public function login(
         LoginRequest $request,
         LoginUser $loginUser,
+        CreateAccessToken $createAccessToken,
     ): JsonResponse {
         $user = $loginUser->execute(
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
         );
 
-        $token = $user->createToken(
+        $token = $createAccessToken->execute(
+            user: $user,
             name: 'api',
             abilities: ['*'],
         )->plainTextToken;

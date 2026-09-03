@@ -78,4 +78,54 @@ class LoginTest extends TestCase
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
+
+    public function test_login_token_has_configured_expiration(): void
+    {
+        config(['sanctum.expiration' => 43200]);
+
+        $user = User::factory()->create([
+            'password' => 'password',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertSuccessful();
+
+        $token = $user->tokens()->latest('id')->first();
+
+        $this->assertNotNull($token);
+        $this->assertNotNull($token->expires_at);
+
+        $this->assertEqualsWithDelta(
+            now()->addMinutes(43200)->timestamp,
+            $token->expires_at->timestamp,
+            5,
+        );
+    }
+
+    public function test_expired_login_token_cannot_access_authenticated_endpoints(): void
+    {
+        config(['sanctum.expiration' => 43200]);
+
+        $user = User::factory()->create();
+
+        $token = $user->createToken(
+            name: 'expired-test',
+            abilities: ['*'],
+            expiresAt: now()->subMinute(),
+        );
+
+        $response = $this->withToken($token->plainTextToken)
+            ->getJson('/api/v1/auth/me');
+
+        $response
+            ->assertUnauthorized()
+            ->assertJson([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ]);
+    }
 }
