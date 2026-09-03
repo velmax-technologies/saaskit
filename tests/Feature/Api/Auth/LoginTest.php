@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class LoginTest extends TestCase
@@ -127,5 +128,41 @@ class LoginTest extends TestCase
                 'success' => false,
                 'message' => 'Unauthenticated.',
             ]);
+    }
+
+    public function test_login_is_rate_limited(): void
+    {
+        config(['auth.rate_limits.login' => 2]);
+
+        $user = User::factory()->create([
+            'password' => 'password',
+        ]);
+
+        $payload = [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ];
+
+        $this->postJson('/api/v1/auth/login', $payload)
+            ->assertStatus(422);
+
+        $this->postJson('/api/v1/auth/login', $payload)
+            ->assertStatus(422);
+
+        $response = $this->postJson('/api/v1/auth/login', $payload);
+
+        $response
+            ->assertTooManyRequests()
+            ->assertJson([
+                'success' => false,
+                'message' => 'Too Many Attempts.',
+            ]);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        RateLimiter::clear('auth-login');
     }
 }

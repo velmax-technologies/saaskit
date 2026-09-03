@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -79,5 +80,43 @@ class RegistrationTest extends TestCase
         $response
             ->assertUnprocessable()
             ->assertJsonPath('success', false);
+    }
+
+    public function test_registration_is_rate_limited(): void
+    {
+        config(['auth.rate_limits.register' => 2]);
+
+        $payload = [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ];
+
+        $this->postJson('/api/v1/auth/register', $payload)
+            ->assertCreated();
+
+        $payload['email'] = 'test2@example.com';
+
+        $this->postJson('/api/v1/auth/register', $payload)
+            ->assertCreated();
+
+        $payload['email'] = 'test3@example.com';
+
+        $response = $this->postJson('/api/v1/auth/register', $payload);
+
+        $response
+            ->assertTooManyRequests()
+            ->assertJson([
+                'success' => false,
+                'message' => 'Too Many Attempts.',
+            ]);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        RateLimiter::clear('auth-register');
     }
 }
