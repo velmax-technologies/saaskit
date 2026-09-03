@@ -21,6 +21,10 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
+
+            Route::get('/sessions', [AuthController::class, 'sessions']);
+            Route::delete('/sessions/{publicId}', [AuthController::class, 'revokeSession']);
+            Route::delete('/sessions', [AuthController::class, 'revokeOtherSessions']);
         });
 
     });

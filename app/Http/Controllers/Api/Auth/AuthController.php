@@ -7,6 +7,7 @@ use App\Actions\Auth\RegisterUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Requests\Api\Auth\RegisterRequest;
+use App\Http\Resources\Api\Auth\SessionResource;
 use App\Http\Resources\Api\Auth\UserResource;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -70,6 +71,59 @@ class AuthController extends Controller
                 'user' => new UserResource($request->user()),
             ],
             message: 'Authenticated user retrieved successfully.',
+        );
+    }
+
+    public function sessions(Request $request): JsonResponse
+    {
+        $sessions = $request->user()
+            ->tokens()
+            ->latest()
+            ->get();
+
+        return ApiResponse::success(
+            data: [
+                'sessions' => SessionResource::collection($sessions),
+            ],
+            message: 'Active sessions retrieved successfully.',
+        );
+    }
+
+    public function revokeSession(
+        Request $request,
+        string $publicId,
+    ): JsonResponse {
+        $token = $request->user()
+            ->tokens()
+            ->where('public_id', $publicId)
+            ->first();
+
+        if (! $token) {
+            return ApiResponse::notFound('Session not found.');
+        }
+
+        $token->delete();
+
+        return ApiResponse::success(
+            message: 'Session revoked successfully.',
+        );
+    }
+
+    public function revokeOtherSessions(Request $request): JsonResponse
+    {
+        $currentToken = $request->user()->currentAccessToken();
+
+        $query = $request->user()
+            ->tokens();
+
+        if ($currentToken) {
+            $query->where('id', '!=', $currentToken->id);
+        }
+
+        $query->delete();
+
+        return ApiResponse::success(
+            message: 'Other sessions revoked successfully.',
         );
     }
 
