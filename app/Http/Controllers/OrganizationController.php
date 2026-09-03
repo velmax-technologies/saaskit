@@ -5,11 +5,47 @@ namespace App\Http\Controllers;
 use App\Actions\Tenancy\CreateOrganization;
 use App\Http\Requests\Api\Organization\StoreOrganizationRequest;
 use App\Http\Resources\Api\Organization\OrganizationResource;
+use App\Models\Organization;
 use App\Support\Api\ApiResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class OrganizationController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $organizations = Organization::query()
+            ->whereHas('members', function (Builder $query) use ($request): void {
+                $query
+                    ->where('user_id', $request->user()->id)
+                    ->where('status', 'active');
+            })
+            ->latest()
+            ->paginate();
+
+        return ApiResponse::success(
+            data: [
+                'organizations' => OrganizationResource::collection(
+                    $organizations->items(),
+                )->resolve(),
+                'pagination' => [
+                    'current_page' => $organizations->currentPage(),
+                    'last_page' => $organizations->lastPage(),
+                    'per_page' => $organizations->perPage(),
+                    'total' => $organizations->total(),
+                    'links' => [
+                        'first' => $organizations->url(1),
+                        'last' => $organizations->url($organizations->lastPage()),
+                        'previous' => $organizations->previousPageUrl(),
+                        'next' => $organizations->nextPageUrl(),
+                    ],
+                ],
+            ],
+            message: 'Organizations retrieved successfully.',
+        );
+    }
+
     public function store(
         StoreOrganizationRequest $request,
         CreateOrganization $createOrganization,
@@ -26,6 +62,18 @@ class OrganizationController extends Controller
                 'organization' => new OrganizationResource($organization),
             ],
             message: 'Organization created successfully.',
+        );
+    }
+
+    public function show(Organization $organization): JsonResponse
+    {
+        $this->authorize('view', $organization);
+
+        return ApiResponse::success(
+            data: [
+                'organization' => new OrganizationResource($organization),
+            ],
+            message: 'Organization retrieved successfully.',
         );
     }
 }

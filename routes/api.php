@@ -19,7 +19,9 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')
         ->prefix('organizations')
         ->group(function (): void {
+            Route::get('/', [OrganizationController::class, 'index']);
             Route::post('/', [OrganizationController::class, 'store']);
+            Route::get('/{organization}', [OrganizationController::class, 'show']);
         });
 
     Route::prefix('auth')->group(function (): void {
