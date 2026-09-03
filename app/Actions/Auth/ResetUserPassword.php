@@ -23,7 +23,7 @@ final class ResetUserPassword
             function (User $user, string $password): void {
                 DB::transaction(function () use ($user, $password): void {
                     $user->forceFill([
-                         'password' => $password,
+                        'password' => $password,
                     ])->save();
 
                     $user->tokens()->delete();
