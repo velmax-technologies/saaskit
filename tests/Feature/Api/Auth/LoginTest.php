@@ -4,7 +4,6 @@ namespace Tests\Feature\Api\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class LoginTest extends TestCase
@@ -167,6 +166,6 @@ class LoginTest extends TestCase
     {
         parent::setUp();
 
-        RateLimiter::clear('auth-login');
+        $this->app['cache']->flush();
     }
 }
