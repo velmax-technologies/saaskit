@@ -118,6 +118,7 @@ return [
         'login' => (int) env('AUTH_LOGIN_RATE_LIMIT', 5),
         'register' => (int) env('AUTH_REGISTER_RATE_LIMIT', 3),
         'forgot_password' => (int) env('AUTH_FORGOT_PASSWORD_RATE_LIMIT', 3),
+        'verification' => (int) env('AUTH_VERIFICATION_RATE_LIMIT', 3),
     ],
 
 ];

@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Models\PersonalAccessToken;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 
@@ -56,6 +58,28 @@ class AppServiceProvider extends ServiceProvider
                 config('auth.rate_limits.forgot_password')
             )->by(
                 strtolower($request->input('email')).'|'.$request->ip()
+            );
+        });
+
+        RateLimiter::for('auth-verification', function (Request $request) {
+            return Limit::perMinute(
+                config('auth.rate_limits.verification')
+            )->by(
+                $request->user()?->getAuthIdentifier()
+                    ?? $request->ip()
+            );
+        });
+
+        VerifyEmail::createUrlUsing(function (object $notifiable): string {
+            return URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addMinutes(
+                    config('auth.verification.expire', 60)
+                ),
+                [
+                    'publicId' => $notifiable->getRouteKey(),
+                    'hash' => sha1($notifiable->getEmailForVerification()),
+                ],
             );
         });
 

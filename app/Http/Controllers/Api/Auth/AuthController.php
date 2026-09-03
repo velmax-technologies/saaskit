@@ -23,6 +23,7 @@ class AuthController extends Controller
     public function register(
         RegisterRequest $request,
         RegisterUser $registerUser,
+        CreateAccessToken $createAccessToken,
     ): JsonResponse {
         $user = $registerUser->execute(
             name: $request->string('name')->toString(),
@@ -30,7 +31,10 @@ class AuthController extends Controller
             password: $request->string('password')->toString(),
         );
 
-        $token = $user->createToken(
+        $user->sendEmailVerificationNotification();
+
+        $token = $createAccessToken->execute(
+            user: $user,
             name: 'api',
             abilities: ['*'],
         )->plainTextToken;

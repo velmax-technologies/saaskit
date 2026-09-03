@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -25,6 +26,22 @@ Route::prefix('v1')->group(function (): void {
             ->middleware('throttle:auth-forgot-password');
 
         Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+        Route::get('/email/verify/{publicId}/{hash}', [
+            EmailVerificationController::class,
+            'verify',
+        ])
+            ->middleware('signed')
+            ->name('verification.verify');
+
+        Route::post('/email/resend-verification', [
+            EmailVerificationController::class,
+            'resend',
+        ])
+            ->middleware([
+                'auth:sanctum',
+                'throttle:auth-verification',
+            ]);
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/me', [AuthController::class, 'me']);
