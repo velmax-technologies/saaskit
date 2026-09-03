@@ -2,9 +2,9 @@
 
 namespace App\Actions\Auth;
 
+use App\Exceptions\InvalidCredentialsException;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 final class LoginUser
 {
@@ -15,9 +15,7 @@ final class LoginUser
         $user = User::where('email', $email)->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+            throw new InvalidCredentialsException;
         }
 
         return $user;

@@ -47,12 +47,12 @@ class LoginTest extends TestCase
         ]);
 
         $response
-            ->assertUnprocessable()
-            ->assertJsonPath('success', false)
-            ->assertJsonPath(
-                'errors.email.0',
-                'The provided credentials are incorrect.',
-            );
+            ->assertUnauthorized()
+            ->assertJson([
+                'success' => false,
+                'message' => 'The provided credentials are incorrect.',
+                'errors' => null,
+            ]);
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
@@ -74,8 +74,12 @@ class LoginTest extends TestCase
         ]);
 
         $response
-            ->assertUnprocessable()
-            ->assertJsonPath('success', false);
+            ->assertUnauthorized()
+            ->assertJson([
+                'success' => false,
+                'message' => 'The provided credentials are incorrect.',
+                'errors' => null,
+            ]);
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
@@ -144,10 +148,10 @@ class LoginTest extends TestCase
         ];
 
         $this->postJson('/api/v1/auth/login', $payload)
-            ->assertStatus(422);
+            ->assertUnauthorized();
 
         $this->postJson('/api/v1/auth/login', $payload)
-            ->assertStatus(422);
+            ->assertUnauthorized();
 
         $response = $this->postJson('/api/v1/auth/login', $payload);
 

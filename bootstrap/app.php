@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\InvalidCredentialsException;
 use App\Support\Api\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -64,6 +65,16 @@ return Application::configure(basePath: dirname(__DIR__))
                     $e->getStatusCode(),
                 ),
             };
+        });
+
+        $exceptions->render(function (InvalidCredentialsException $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return ApiResponse::unauthorized(
+                $e->getMessage(),
+            );
         });
 
         $exceptions->render(function (Throwable $e, Request $request) {
