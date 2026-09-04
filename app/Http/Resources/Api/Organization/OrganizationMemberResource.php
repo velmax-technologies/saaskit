@@ -18,6 +18,12 @@ class OrganizationMemberResource extends JsonResource
                 'email' => $this->user->email,
             ],
 
+            'organization' => [
+                'id' => $this->organization->public_id,
+                'name' => $this->organization->name,
+                'slug' => $this->organization->slug,
+            ],
+
             'role' => $this->role->value,
             'status' => $this->status,
 

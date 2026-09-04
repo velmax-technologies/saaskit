@@ -6,9 +6,9 @@ use App\Enums\OrganizationInvitationStatus;
 use App\Enums\OrganizationMemberRole;
 use App\Models\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 #[Fillable([
     'organization_id',

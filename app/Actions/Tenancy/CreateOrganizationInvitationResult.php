@@ -9,6 +9,5 @@ final readonly class CreateOrganizationInvitationResult
     public function __construct(
         public OrganizationInvitation $invitation,
         public string $token,
-    ) {
-    }
+    ) {}
 }

@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -50,7 +51,7 @@ class OrganizationInvitationTest extends TestCase
 
     public function test_public_id_is_used_as_route_key(): void
     {
-        $invitation = new OrganizationInvitation();
+        $invitation = new OrganizationInvitation;
 
         $this->assertSame(
             'public_id',
@@ -126,15 +127,15 @@ class OrganizationInvitationTest extends TestCase
 
     public function test_relationships_are_defined(): void
     {
-        $invitation = new OrganizationInvitation();
+        $invitation = new OrganizationInvitation;
 
         $this->assertInstanceOf(
-            \Illuminate\Database\Eloquent\Relations\BelongsTo::class,
+            BelongsTo::class,
             $invitation->organization(),
         );
 
         $this->assertInstanceOf(
-            \Illuminate\Database\Eloquent\Relations\BelongsTo::class,
+            BelongsTo::class,
             $invitation->inviter(),
         );
     }

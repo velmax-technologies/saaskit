@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Tenancy\AcceptOrganizationInvitation;
 use App\Actions\Tenancy\CreateOrganizationInvitation;
+use App\Enums\OrganizationMemberRole;
+use App\Http\Requests\Api\Organization\AcceptOrganizationInvitationRequest;
 use App\Http\Requests\Api\Organization\ListOrganizationInvitationRequest;
 use App\Http\Requests\Api\Organization\StoreOrganizationInvitationRequest;
 use App\Http\Resources\Api\Organization\OrganizationInvitationResource;
-use App\Enums\OrganizationMemberRole;
+use App\Http\Resources\Api\Organization\OrganizationMemberResource;
 use App\Models\Organization;
+use App\Models\OrganizationInvitation;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -76,6 +80,30 @@ class OrganizationInvitationController extends Controller
                 ),
             ],
             message: 'Invitation created successfully.',
+        );
+    }
+
+    public function accept(
+        AcceptOrganizationInvitationRequest $request,
+        OrganizationInvitation $invitation,
+        AcceptOrganizationInvitation $acceptInvitation,
+    ): JsonResponse {
+        $membership = $acceptInvitation->execute(
+            user: $request->user(),
+            invitation: $invitation,
+            token: $request->string('token')->toString(),
+        );
+
+        $membership->load([
+            'user',
+            'organization',
+        ]);
+
+        return ApiResponse::success(
+            data: [
+                'membership' => new OrganizationMemberResource($membership),
+            ],
+            message: 'Invitation accepted successfully.',
         );
     }
 }

@@ -127,7 +127,7 @@ final class ApiResponse
         return self::error($message, 500, $errors);
     }
 
-     /**
+    /**
      * Return a successful paginated API response.
      */
     public static function paginated(

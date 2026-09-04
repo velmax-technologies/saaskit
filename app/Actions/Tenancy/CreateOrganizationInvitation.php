@@ -11,7 +11,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Actions\Tenancy\CreateOrganizationInvitationResult;
 
 final class CreateOrganizationInvitation
 {
@@ -20,9 +19,9 @@ final class CreateOrganizationInvitation
         Organization $organization,
         string $email,
         OrganizationMemberRole $role,
-        
+
     ): CreateOrganizationInvitationResult {
-   
+
         $email = strtolower(trim($email));
 
         return DB::transaction(function () use (
@@ -30,7 +29,7 @@ final class CreateOrganizationInvitation
             $organization,
             $email,
             $role,
-         ): CreateOrganizationInvitationResult {
+        ): CreateOrganizationInvitationResult {
             $existingMember = OrganizationMember::query()
                 ->where('organization_id', $organization->id)
                 ->whereHas('user', function ($query) use ($email): void {

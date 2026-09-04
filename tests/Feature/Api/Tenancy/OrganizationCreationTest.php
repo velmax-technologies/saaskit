@@ -4,7 +4,6 @@ namespace Tests\Feature\Api\Tenancy;
 
 use App\Enums\OrganizationMemberRole;
 use App\Models\Organization;
-use App\Models\OrganizationMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

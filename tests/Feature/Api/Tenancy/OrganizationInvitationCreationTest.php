@@ -9,7 +9,6 @@ use App\Models\OrganizationInvitation;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class OrganizationInvitationCreationTest extends TestCase
