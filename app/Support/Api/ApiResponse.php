@@ -3,6 +3,7 @@
 namespace App\Support\Api;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 final class ApiResponse
 {
@@ -124,5 +125,28 @@ final class ApiResponse
         mixed $errors = null,
     ): JsonResponse {
         return self::error($message, 500, $errors);
+    }
+
+     /**
+     * Return a successful paginated API response.
+     */
+    public static function paginated(
+        ResourceCollection $resource,
+        string $resourceKey,
+        string $message = 'Request successful.',
+    ): JsonResponse {
+        $resourceResponse = $resource->response();
+
+        $payload = $resourceResponse->getData(true);
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => [
+                $resourceKey => $payload['data'] ?? [],
+            ],
+            'meta' => $payload['meta'] ?? [],
+            'links' => $payload['links'] ?? [],
+        ], $resourceResponse->getStatusCode());
     }
 }

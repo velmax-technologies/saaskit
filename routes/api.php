@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -22,6 +23,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/', [OrganizationController::class, 'index']);
             Route::post('/', [OrganizationController::class, 'store']);
             Route::get('/{organization}', [OrganizationController::class, 'show']);
+            Route::get('/{organization}/members', [
+                OrganizationMemberController::class,
+                'index',
+            ]);
         });
 
     Route::prefix('auth')->group(function (): void {
