@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Tenancy\CreateOrganization;
+use App\Actions\Tenancy\TransferOrganizationOwnership;
 use App\Http\Requests\Api\Organization\StoreOrganizationRequest;
+use App\Http\Requests\Api\Organization\TransferOrganizationOwnershipRequest;
+use App\Http\Resources\Api\Organization\OrganizationMemberResource;
 use App\Http\Resources\Api\Organization\OrganizationResource;
 use App\Models\Organization;
 use App\Support\Api\ApiResponse;
@@ -74,6 +77,31 @@ class OrganizationController extends Controller
                 'organization' => new OrganizationResource($organization),
             ],
             message: 'Organization retrieved successfully.',
+        );
+    }
+
+    public function transferOwnership(
+        TransferOrganizationOwnershipRequest $request,
+        Organization $organization,
+        TransferOrganizationOwnership $action,
+    ): JsonResponse {
+        $target = $organization->members()
+            ->where(
+                'public_id',
+                $request->string('member')->toString(),
+            )
+            ->firstOrFail();
+
+        $member = $action->execute(
+            organization: $organization,
+            target: $target,
+        );
+
+        return ApiResponse::success(
+            data: [
+                'member' => new OrganizationMemberResource($member),
+            ],
+            message: 'Organization ownership transferred successfully.',
         );
     }
 }

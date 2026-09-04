@@ -110,6 +110,7 @@ Route::prefix('v1')->group(function (): void {
         ->prefix('organizations')
         ->group(function (): void {
 
+            // Organization routes
             Route::get('/', [
                 OrganizationController::class,
                 'index',
@@ -124,6 +125,14 @@ Route::prefix('v1')->group(function (): void {
                 OrganizationController::class,
                 'show',
             ]);
+
+            Route::post(
+                '/{organization}/ownership/transfer',
+                [
+                    OrganizationController::class,
+                    'transferOwnership',
+                ],
+            );
 
             /*
             |--------------------------------------------------------------------------
