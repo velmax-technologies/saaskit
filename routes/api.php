@@ -135,6 +135,10 @@ Route::prefix('v1')->group(function (): void {
                 OrganizationMemberController::class,
                 'index',
             ]);
+            Route::patch('/{organization}/members/{member}', [
+                OrganizationMemberController::class,
+                'update',
+            ]);
 
             /*
             |--------------------------------------------------------------------------

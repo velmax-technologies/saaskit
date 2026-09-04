@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Tenancy\UpdateOrganizationMemberRole;
+use App\Enums\OrganizationMemberRole;
+use App\Http\Requests\Api\Organization\UpdateOrganizationMemberRequest;
 use App\Http\Resources\Api\Organization\OrganizationMemberResource;
 use App\Models\Organization;
+use App\Models\OrganizationMember;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +35,39 @@ class OrganizationMemberController extends Controller
             resource: OrganizationMemberResource::collection($members),
             resourceKey: 'members',
             message: 'Organization members retrieved successfully.',
+        );
+    }
+
+    public function update(
+        UpdateOrganizationMemberRequest $request,
+        Organization $organization,
+        OrganizationMember $member,
+        UpdateOrganizationMemberRole $action,
+    ): JsonResponse {
+        abort_unless(
+            $member->organization_id === $organization->id,
+            404,
+        );
+
+        abort_unless(
+            $member->status === 'active',
+            404,
+        );
+
+        $updatedMember = $action->execute(
+            member: $member,
+            role: OrganizationMemberRole::from(
+                $request->validated('role'),
+            ),
+        );
+
+        return ApiResponse::success(
+            data: [
+                'member' => new OrganizationMemberResource(
+                    $updatedMember,
+                ),
+            ],
+            message: 'Organization member role updated successfully.',
         );
     }
 }
