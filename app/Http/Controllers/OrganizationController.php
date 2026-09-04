@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Tenancy\CreateOrganization;
 use App\Actions\Tenancy\LeaveOrganization;
+use App\Actions\Tenancy\RejoinOrganization;
 use App\Actions\Tenancy\TransferOrganizationOwnership;
 use App\Http\Requests\Api\Organization\StoreOrganizationRequest;
 use App\Http\Requests\Api\Organization\TransferOrganizationOwnershipRequest;
@@ -121,5 +122,24 @@ class OrganizationController extends Controller
         $action->execute($member);
 
         return ApiResponse::noContent();
+    }
+
+    public function rejoin(
+        Request $request,
+        Organization $organization,
+        RejoinOrganization $action,
+    ): JsonResponse {
+        $member = $organization->members()
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $member = $action->execute($member);
+
+        return ApiResponse::success(
+            data: [
+                'member' => new OrganizationMemberResource($member),
+            ],
+            message: 'You have rejoined the organization successfully.',
+        );
     }
 }

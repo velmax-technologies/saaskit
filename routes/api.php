@@ -142,6 +142,11 @@ Route::prefix('v1')->group(function (): void {
                 ],
             );
 
+            Route::post('/{organization}/rejoin', [
+                OrganizationController::class,
+                'rejoin',
+            ]);
+
             /*
             |--------------------------------------------------------------------------
             | Organization Members
