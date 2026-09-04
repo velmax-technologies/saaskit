@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Tenancy\CreateOrganization;
+use App\Actions\Tenancy\LeaveOrganization;
 use App\Actions\Tenancy\TransferOrganizationOwnership;
 use App\Http\Requests\Api\Organization\StoreOrganizationRequest;
 use App\Http\Requests\Api\Organization\TransferOrganizationOwnershipRequest;
@@ -13,6 +14,7 @@ use App\Support\Api\ApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class OrganizationController extends Controller
 {
@@ -103,5 +105,21 @@ class OrganizationController extends Controller
             ],
             message: 'Organization ownership transferred successfully.',
         );
+    }
+
+    public function leave(
+        Request $request,
+        Organization $organization,
+        LeaveOrganization $action,
+    ): Response {
+        $member = $organization->members()
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $this->authorize('leave', $organization);
+
+        $action->execute($member);
+
+        return ApiResponse::noContent();
     }
 }

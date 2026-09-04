@@ -134,6 +134,14 @@ Route::prefix('v1')->group(function (): void {
                 ],
             );
 
+            Route::post(
+                '/{organization}/leave',
+                [
+                    OrganizationController::class,
+                    'leave',
+                ],
+            );
+
             /*
             |--------------------------------------------------------------------------
             | Organization Members
