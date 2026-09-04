@@ -139,6 +139,10 @@ Route::prefix('v1')->group(function (): void {
                 OrganizationMemberController::class,
                 'update',
             ]);
+            Route::delete('/{organization}/members/{member}', [
+                OrganizationMemberController::class,
+                'destroy',
+            ]);
 
             /*
             |--------------------------------------------------------------------------

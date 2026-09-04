@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\OrganizationMemberRole;
 use App\Models\Organization;
+use App\Models\OrganizationMember;
 use App\Models\User;
 
 class OrganizationPolicy
@@ -56,14 +57,40 @@ class OrganizationPolicy
         );
     }
 
-    public function removeMembers(User $user, Organization $organization): bool
-    {
-        return $this->hasAnyRole(
+    public function removeMembers(
+        User $user,
+        Organization $organization,
+        OrganizationMember $member,
+    ): bool {
+        if ($member->organization_id !== $organization->id) {
+            return false;
+        }
+
+        if ($member->status !== 'active') {
+            return false;
+        }
+
+        if ($member->isOwner()) {
+            return false;
+        }
+
+        if ($user->id === $member->user_id) {
+            return false;
+        }
+
+        if ($this->hasRole(
             $user,
             $organization,
             OrganizationMemberRole::OWNER,
+        )) {
+            return true;
+        }
+
+        return $this->hasRole(
+            $user,
+            $organization,
             OrganizationMemberRole::ADMIN,
-        );
+        ) && $member->isMember();
     }
 
     public function transferOwnership(User $user, Organization $organization): bool

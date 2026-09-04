@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Tenancy\RemoveOrganizationMember;
 use App\Actions\Tenancy\UpdateOrganizationMemberRole;
 use App\Enums\OrganizationMemberRole;
 use App\Http\Requests\Api\Organization\UpdateOrganizationMemberRequest;
@@ -11,6 +12,7 @@ use App\Models\OrganizationMember;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class OrganizationMemberController extends Controller
 {
@@ -69,5 +71,25 @@ class OrganizationMemberController extends Controller
             ],
             message: 'Organization member role updated successfully.',
         );
+    }
+
+    public function destroy(
+        Organization $organization,
+        OrganizationMember $member,
+        RemoveOrganizationMember $action,
+    ): Response {
+        abort_unless(
+            $member->organization_id === $organization->id,
+            404,
+        );
+
+        $this->authorize(
+            'removeMembers',
+            [$organization, $member],
+        );
+
+        $action->execute($member);
+
+        return ApiResponse::noContent();
     }
 }

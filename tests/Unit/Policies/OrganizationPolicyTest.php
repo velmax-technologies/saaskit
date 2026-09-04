@@ -138,23 +138,61 @@ class OrganizationPolicyTest extends TestCase
 
     public function test_admin_can_remove_members(): void
     {
-        [$user, $organization] = $this->createMembership(
-            OrganizationMemberRole::ADMIN,
-        );
+        $policy = new OrganizationPolicy;
+
+        $admin = User::factory()->create();
+
+        $organization = Organization::factory()->create();
+
+        OrganizationMember::factory()
+            ->admin()
+            ->create([
+                'user_id' => $admin->id,
+                'organization_id' => $organization->id,
+            ]);
+
+        $target = OrganizationMember::factory()
+            ->member()
+            ->create([
+                'organization_id' => $organization->id,
+            ]);
 
         $this->assertTrue(
-            $this->policy->removeMembers($user, $organization),
+            $policy->removeMembers(
+                $admin,
+                $organization,
+                $target,
+            ),
         );
     }
 
     public function test_member_cannot_remove_members(): void
     {
-        [$user, $organization] = $this->createMembership(
-            OrganizationMemberRole::MEMBER,
-        );
+        $policy = new OrganizationPolicy;
+
+        $member = User::factory()->create();
+
+        $organization = Organization::factory()->create();
+
+        OrganizationMember::factory()
+            ->member()
+            ->create([
+                'user_id' => $member->id,
+                'organization_id' => $organization->id,
+            ]);
+
+        $target = OrganizationMember::factory()
+            ->member()
+            ->create([
+                'organization_id' => $organization->id,
+            ]);
 
         $this->assertFalse(
-            $this->policy->removeMembers($user, $organization),
+            $policy->removeMembers(
+                $member,
+                $organization,
+                $target,
+            ),
         );
     }
 

@@ -4,6 +4,7 @@ namespace App\Support\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Http\Response;
 
 final class ApiResponse
 {
@@ -35,14 +36,9 @@ final class ApiResponse
     /**
      * Return a successful response with no content.
      */
-    public static function noContent(
-        string $message = 'Request completed successfully.',
-    ): JsonResponse {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => null,
-        ], 200);
+    public static function noContent(): Response
+    {
+        return response()->noContent();
     }
 
     /**
