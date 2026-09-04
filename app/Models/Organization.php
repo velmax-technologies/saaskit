@@ -6,6 +6,7 @@ use App\Models\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 #[Fillable([
     'name',
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Organization extends Model
 {
-    use HasPublicId;
+    use HasPublicId, HasFactory;
 
     protected string $publicIdPrefix = 'org';
 

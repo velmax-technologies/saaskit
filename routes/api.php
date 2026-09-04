@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationMemberController;
+use App\Http\Controllers\OrganizationInvitationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -26,6 +27,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/{organization}/members', [
                 OrganizationMemberController::class,
                 'index',
+            ]);
+            Route::post('/{organization}/invitations', [
+                OrganizationInvitationController::class,
+                'store',
             ]);
         });
 
