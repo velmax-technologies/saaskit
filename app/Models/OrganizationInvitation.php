@@ -8,6 +8,7 @@ use App\Models\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 #[Fillable([
     'organization_id',
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class OrganizationInvitation extends Model
 {
-    use HasPublicId;
+    use HasFactory, HasPublicId;
 
     protected string $publicIdPrefix = 'inv';
 

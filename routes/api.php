@@ -32,6 +32,10 @@ Route::prefix('v1')->group(function (): void {
                 OrganizationInvitationController::class,
                 'store',
             ]);
+            Route::get('/{organization}/invitations', [
+                OrganizationInvitationController::class,
+                'index',
+            ]);
         });
 
     Route::prefix('auth')->group(function (): void {
