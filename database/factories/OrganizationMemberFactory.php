@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -15,16 +16,22 @@ class OrganizationMemberFactory extends Factory
 {
     protected $model = OrganizationMember::class;
 
+    /**
+     * Define the model's default state.
+     */
     public function definition(): array
     {
         return [
             'user_id' => User::factory(),
             'organization_id' => Organization::factory(),
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ];
     }
 
+    /**
+     * Create an organization owner membership.
+     */
     public function owner(): static
     {
         return $this->state(fn (): array => [
@@ -32,6 +39,9 @@ class OrganizationMemberFactory extends Factory
         ]);
     }
 
+    /**
+     * Create an organization admin membership.
+     */
     public function admin(): static
     {
         return $this->state(fn (): array => [
@@ -39,6 +49,9 @@ class OrganizationMemberFactory extends Factory
         ]);
     }
 
+    /**
+     * Create an organization member membership.
+     */
     public function member(): static
     {
         return $this->state(fn (): array => [
@@ -46,10 +59,33 @@ class OrganizationMemberFactory extends Factory
         ]);
     }
 
-    public function inactive(): static
+    /**
+     * Create a membership where the user voluntarily left.
+     */
+    public function left(): static
     {
         return $this->state(fn (): array => [
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
+        ]);
+    }
+
+    /**
+     * Create a membership that was removed by an administrator.
+     */
+    public function removed(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => OrganizationMemberStatus::REMOVED->value,
+        ]);
+    }
+
+    /**
+     * Create an active membership.
+     */
+    public function active(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 }

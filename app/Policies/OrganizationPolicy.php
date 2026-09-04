@@ -6,6 +6,7 @@ use App\Enums\OrganizationMemberRole;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Enums\OrganizationMemberStatus;
 
 class OrganizationPolicy
 {
@@ -66,7 +67,7 @@ class OrganizationPolicy
             return false;
         }
 
-        if ($member->status !== 'active') {
+        if ($member->status !== OrganizationMemberStatus::ACTIVE) {
             return false;
         }
 

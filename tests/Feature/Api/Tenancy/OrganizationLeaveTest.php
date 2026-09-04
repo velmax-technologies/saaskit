@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Tenancy;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -38,7 +39,7 @@ class OrganizationLeaveTest extends TestCase
             'user_id' => $admin->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::ADMIN->value,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 
@@ -67,7 +68,7 @@ class OrganizationLeaveTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 
@@ -94,7 +95,7 @@ class OrganizationLeaveTest extends TestCase
         $this->assertDatabaseHas('organization_members', [
             'id' => $ownerMember->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -106,7 +107,7 @@ class OrganizationLeaveTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
@@ -122,7 +123,7 @@ class OrganizationLeaveTest extends TestCase
         $this->assertDatabaseHas('organization_members', [
             'id' => $member->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 
@@ -164,7 +165,7 @@ class OrganizationLeaveTest extends TestCase
         $this->assertDatabaseHas('organization_members', [
             'id' => $member->id,
             'organization_id' => $otherOrganization->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -200,7 +201,7 @@ class OrganizationLeaveTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $member->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
 
         $this->assertDatabaseCount('organization_members', 1);
@@ -267,7 +268,7 @@ class OrganizationLeaveTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $member->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 }

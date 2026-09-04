@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tenancy;
 
+use App\Enums\OrganizationMemberStatus;
 use App\Models\OrganizationMember;
 use Illuminate\Validation\ValidationException;
 
@@ -10,7 +11,7 @@ final class LeaveOrganization
     public function execute(
         OrganizationMember $member,
     ): void {
-        if ($member->status !== 'active') {
+        if ($member->status !== OrganizationMemberStatus::ACTIVE) {
             throw ValidationException::withMessages([
                 'organization' => [
                     'You are not an active member of this organization.',
@@ -27,7 +28,7 @@ final class LeaveOrganization
         }
 
         $member->update([
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 }

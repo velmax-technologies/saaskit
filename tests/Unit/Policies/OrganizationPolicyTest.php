@@ -3,6 +3,7 @@
 namespace Tests\Unit\Policies;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -138,8 +139,6 @@ class OrganizationPolicyTest extends TestCase
 
     public function test_admin_can_remove_members(): void
     {
-        $policy = new OrganizationPolicy;
-
         $admin = User::factory()->create();
 
         $organization = Organization::factory()->create();
@@ -158,7 +157,7 @@ class OrganizationPolicyTest extends TestCase
             ]);
 
         $this->assertTrue(
-            $policy->removeMembers(
+            $this->policy->removeMembers(
                 $admin,
                 $organization,
                 $target,
@@ -168,8 +167,6 @@ class OrganizationPolicyTest extends TestCase
 
     public function test_member_cannot_remove_members(): void
     {
-        $policy = new OrganizationPolicy;
-
         $member = User::factory()->create();
 
         $organization = Organization::factory()->create();
@@ -188,7 +185,7 @@ class OrganizationPolicyTest extends TestCase
             ]);
 
         $this->assertFalse(
-            $policy->removeMembers(
+            $this->policy->removeMembers(
                 $member,
                 $organization,
                 $target,
@@ -256,11 +253,31 @@ class OrganizationPolicyTest extends TestCase
         );
     }
 
-    public function test_inactive_membership_has_no_permissions(): void
+    public function test_left_membership_has_no_permissions(): void
     {
         [$user, $organization] = $this->createMembership(
             OrganizationMemberRole::ADMIN,
-            status: 'inactive',
+            status: OrganizationMemberStatus::LEFT,
+        );
+
+        $this->assertFalse(
+            $this->policy->view($user, $organization),
+        );
+
+        $this->assertFalse(
+            $this->policy->update($user, $organization),
+        );
+
+        $this->assertFalse(
+            $this->policy->inviteMembers($user, $organization),
+        );
+    }
+
+    public function test_removed_membership_has_no_permissions(): void
+    {
+        [$user, $organization] = $this->createMembership(
+            OrganizationMemberRole::ADMIN,
+            status: OrganizationMemberStatus::REMOVED,
         );
 
         $this->assertFalse(
@@ -303,7 +320,7 @@ class OrganizationPolicyTest extends TestCase
     private function createMembership(
         OrganizationMemberRole $role,
         ?Organization $organization = null,
-        string $status = 'active',
+        OrganizationMemberStatus $status = OrganizationMemberStatus::ACTIVE,
     ): array {
         $user = User::factory()->create();
 
@@ -316,7 +333,7 @@ class OrganizationPolicyTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => $role->value,
-            'status' => $status,
+            'status' => $status->value,
         ]);
 
         return [$user, $organization];
