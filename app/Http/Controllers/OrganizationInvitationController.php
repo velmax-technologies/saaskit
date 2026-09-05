@@ -14,6 +14,9 @@ use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use App\Actions\Tenancy\CancelOrganizationInvitation;
+use App\Actions\Tenancy\ResendOrganizationInvitation;
+use Illuminate\Http\Response;
 
 class OrganizationInvitationController extends Controller
 {
@@ -105,5 +108,42 @@ class OrganizationInvitationController extends Controller
             ],
             message: 'Invitation accepted successfully.',
         );
+    }
+
+    public function resend(
+        Organization $organization,
+        OrganizationInvitation $invitation,
+        ResendOrganizationInvitation $resendInvitation,
+    ): JsonResponse {
+        $this->authorize('inviteMembers', $organization);
+
+        $result = $resendInvitation->execute(
+            organization: $organization,
+            invitation: $invitation,
+        );
+
+        return ApiResponse::success(
+            data: [
+                'invitation' => new OrganizationInvitationResource(
+                    $result->invitation,
+                ),
+            ],
+            message: 'Invitation resent successfully.',
+        );
+    }
+
+    public function cancel(
+        Organization $organization,
+        OrganizationInvitation $invitation,
+        CancelOrganizationInvitation $cancelInvitation,
+    ): Response {
+        $this->authorize('inviteMembers', $organization);
+
+        $cancelInvitation->execute(
+            organization: $organization,
+            invitation: $invitation,
+        );
+
+        return ApiResponse::noContent();
     }
 }
