@@ -2,8 +2,8 @@
 
 namespace App\Actions\Tenancy;
 
-use App\Models\OrganizationMember;
 use App\Enums\OrganizationMemberStatus;
+use App\Models\OrganizationMember;
 use Illuminate\Validation\ValidationException;
 
 final class RejoinOrganization
@@ -19,10 +19,18 @@ final class RejoinOrganization
             ]);
         }
 
-        if ($member->role->value === 'owner') {
+        if ($member->status === OrganizationMemberStatus::REMOVED) {
             throw ValidationException::withMessages([
                 'organization' => [
-                    'The organization owner cannot rejoin as an inactive owner.',
+                    'You cannot rejoin an organization after being removed. You must be invited again.',
+                ],
+            ]);
+        }
+
+        if ($member->isOwner()) {
+            throw ValidationException::withMessages([
+                'organization' => [
+                    'The organization owner cannot rejoin as a former member.',
                 ],
             ]);
         }
