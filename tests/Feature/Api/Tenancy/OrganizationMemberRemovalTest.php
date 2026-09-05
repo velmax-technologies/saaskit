@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Tenancy;
 
 use App\Models\Organization;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,7 +45,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::REMOVED->value,
         ]);
     }
 
@@ -79,7 +80,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::REMOVED->value,
         ]);
     }
 
@@ -114,7 +115,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::REMOVED->value,
         ]);
     }
 
@@ -149,7 +150,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -184,7 +185,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -211,7 +212,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -246,7 +247,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -281,7 +282,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -308,7 +309,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -341,7 +342,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -377,7 +378,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
     }
 
@@ -397,7 +398,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $target = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'organization_id' => $organization->id,
                 'user_id' => $member->id,
@@ -413,7 +414,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 
@@ -450,7 +451,7 @@ class OrganizationMemberRemovalTest extends TestCase
             'id' => $target->id,
             'organization_id' => $organization->id,
             'user_id' => $member->id,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::REMOVED->value,
         ]);
     }
 
@@ -523,7 +524,7 @@ class OrganizationMemberRemovalTest extends TestCase
 
         $this->assertDatabaseHas('organization_members', [
             'id' => $target->id,
-            'status' => 'inactive',
+             'status' => OrganizationMemberStatus::REMOVED->value,
         ]);
 
         $this->assertNotNull($target->id);

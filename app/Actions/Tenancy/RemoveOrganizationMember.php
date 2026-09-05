@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tenancy;
 
+use App\Enums\OrganizationMemberStatus;
 use App\Models\OrganizationMember;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +19,7 @@ final class RemoveOrganizationMember
             ]);
         }
 
-        if ($member->status !== 'active') {
+        if ($member->status !== OrganizationMemberStatus::ACTIVE) {
             throw ValidationException::withMessages([
                 'member' => [
                     'Only active organization members can be removed.',
@@ -27,7 +28,7 @@ final class RemoveOrganizationMember
         }
 
         $member->update([
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::REMOVED->value,
         ]);
     }
 }
