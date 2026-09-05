@@ -8,6 +8,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Enums\OrganizationMemberStatus;
 
 class OrganizationMemberRoleUpdateTest extends TestCase
 {
@@ -27,14 +28,14 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $owner->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE,
         ]);
 
         $member = OrganizationMember::create([
             'user_id' => $memberUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE,
         ]);
 
         $response = $this->actingAs($owner)
@@ -76,14 +77,14 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $owner->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE,
         ]);
 
         $admin = OrganizationMember::create([
             'user_id' => $adminUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::ADMIN->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE,
         ]);
 
         $response = $this->actingAs($owner)
@@ -121,14 +122,14 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $admin->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::ADMIN->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE,
         ]);
 
         $member = OrganizationMember::create([
             'user_id' => $memberUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE,
         ]);
 
         $this->actingAs($admin)
@@ -155,14 +156,14 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $memberUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         $target = OrganizationMember::create([
             'user_id' => $targetUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         $this->actingAs($memberUser)
@@ -208,14 +209,14 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $owner->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         $targetOwner = OrganizationMember::create([
             'user_id' => $targetOwnerUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         $response = $this->actingAs($owner)
@@ -250,14 +251,14 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $owner->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         $member = OrganizationMember::create([
             'user_id' => $memberUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         $this->actingAs($owner)
@@ -271,7 +272,7 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             ->assertJsonValidationErrors(['role']);
     }
 
-    public function test_inactive_member_cannot_be_updated(): void
+    public function test_left_member_cannot_be_updated(): void
     {
         $owner = User::factory()->create();
         $memberUser = User::factory()->create();
@@ -292,7 +293,7 @@ class OrganizationMemberRoleUpdateTest extends TestCase
             'user_id' => $memberUser->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'inactive',
+            'status' => 'left',
         ]);
 
         $this->actingAs($owner)

@@ -3,6 +3,7 @@
 namespace App\Actions\Tenancy;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ final class TransferOrganizationOwnership
             ]);
         }
 
-        if ($target->status !== 'active') {
+        if ($target->status !== OrganizationMemberStatus::ACTIVE) {
             throw ValidationException::withMessages([
                 'member' => [
                     'Only active members can become organization owners.',
@@ -54,11 +55,15 @@ final class TransferOrganizationOwnership
                 ]);
             }
 
-            $target->refresh();
+            $target = OrganizationMember::query()
+                ->whereKey($target->id)
+                ->lockForUpdate()
+                ->first();
 
             if (
-                $target->organization_id !== $organization->id
-                || $target->status !== 'active'
+                ! $target
+                || $target->organization_id !== $organization->id
+                || $target->status !== OrganizationMemberStatus::ACTIVE
                 || $target->isOwner()
             ) {
                 throw ValidationException::withMessages([

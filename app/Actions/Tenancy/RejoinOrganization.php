@@ -3,6 +3,7 @@
 namespace App\Actions\Tenancy;
 
 use App\Models\OrganizationMember;
+use App\Enums\OrganizationMemberStatus;
 use Illuminate\Validation\ValidationException;
 
 final class RejoinOrganization
@@ -10,7 +11,7 @@ final class RejoinOrganization
     public function execute(
         OrganizationMember $member,
     ): OrganizationMember {
-        if ($member->status === 'active') {
+        if ($member->status === OrganizationMemberStatus::ACTIVE) {
             throw ValidationException::withMessages([
                 'organization' => [
                     'You are already an active member of this organization.',
@@ -27,7 +28,7 @@ final class RejoinOrganization
         }
 
         $member->update([
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         return $member->fresh([

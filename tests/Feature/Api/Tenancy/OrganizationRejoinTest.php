@@ -20,7 +20,7 @@ class OrganizationRejoinTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
@@ -60,7 +60,7 @@ class OrganizationRejoinTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->admin()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
@@ -95,7 +95,7 @@ class OrganizationRejoinTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
@@ -125,7 +125,7 @@ class OrganizationRejoinTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
@@ -150,7 +150,7 @@ class OrganizationRejoinTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->admin()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
@@ -214,7 +214,7 @@ class OrganizationRejoinTest extends TestCase
 
         OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $otherOrganization->id,
@@ -244,7 +244,7 @@ class OrganizationRejoinTest extends TestCase
 
         $member = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,

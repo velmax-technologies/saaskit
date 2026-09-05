@@ -13,6 +13,7 @@ use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Enums\OrganizationMemberStatus;
 
 class OrganizationMemberController extends Controller
 {
@@ -24,7 +25,7 @@ class OrganizationMemberController extends Controller
 
         $members = $organization->members()
             ->with('user')
-            ->where('status', 'active')
+            ->where('status', OrganizationMemberStatus::ACTIVE->value)
             ->orderBy('id')
             ->paginate(
                 perPage: min(
@@ -52,7 +53,7 @@ class OrganizationMemberController extends Controller
         );
 
         abort_unless(
-            $member->status === 'active',
+            $member->status === OrganizationMemberStatus::ACTIVE,
             404,
         );
 

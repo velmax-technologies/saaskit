@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Tenancy;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -204,7 +205,7 @@ class OrganizationOwnershipTransferTest extends TestCase
 
         $targetMember = OrganizationMember::factory()
             ->member()
-            ->inactive()
+            ->left()
             ->create([
                 'organization_id' => $organization->id,
             ]);
@@ -222,7 +223,7 @@ class OrganizationOwnershipTransferTest extends TestCase
         $this->assertDatabaseHas('organization_members', [
             'id' => $targetMember->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
     }
 

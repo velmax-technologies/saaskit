@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Tenancy;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -28,14 +29,14 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $owner->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         OrganizationMember::create([
             'user_id' => $member->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         Sanctum::actingAs($owner);
@@ -71,7 +72,7 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $admin->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::ADMIN->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         Sanctum::actingAs($admin);
@@ -94,7 +95,7 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $member->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         Sanctum::actingAs($member);
@@ -132,7 +133,7 @@ class OrganizationMemberListingTest extends TestCase
         )->assertForbidden();
     }
 
-    public function test_inactive_member_cannot_list_members(): void
+    public function test_left_member_cannot_list_members(): void
     {
         $user = User::factory()->create();
 
@@ -145,7 +146,7 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => 'inactive',
+            'status' => OrganizationMemberStatus::LEFT->value,
         ]);
 
         Sanctum::actingAs($user);
@@ -174,14 +175,14 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         OrganizationMember::create([
             'user_id' => $otherUser->id,
             'organization_id' => $otherOrganization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         Sanctum::actingAs($user);
@@ -210,7 +211,7 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         Sanctum::actingAs($user);
@@ -239,7 +240,7 @@ class OrganizationMemberListingTest extends TestCase
             'user_id' => $owner->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::OWNER->value,
-            'status' => 'active',
+            'status' => OrganizationMemberStatus::ACTIVE->value,
         ]);
 
         for ($i = 0; $i < 20; $i++) {
@@ -249,7 +250,7 @@ class OrganizationMemberListingTest extends TestCase
                 'user_id' => $memberUser->id,
                 'organization_id' => $organization->id,
                 'role' => OrganizationMemberRole::MEMBER->value,
-                'status' => 'active',
+                'status' => OrganizationMemberStatus::ACTIVE->value,
             ]);
         }
 

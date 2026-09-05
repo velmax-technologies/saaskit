@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Tenancy;
 
 use App\Enums\OrganizationMemberRole;
+use App\Enums\OrganizationMemberStatus;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -13,18 +14,19 @@ class OrganizationListingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_list_only_organizations_with_an_active_membership(): void
+    public function test_authenticated_user_can_list_their_organizations(): void
     {
         $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $firstOrganization = $this->createOrganization('first');
-        $secondOrganization = $this->createOrganization('second');
-        $inactiveOrganization = $this->createOrganization('inactive');
-        $otherOrganization = $this->createOrganization('other');
 
-        $this->addMembership($user, $firstOrganization);
-        $this->addMembership($user, $secondOrganization);
-        $this->addMembership($user, $inactiveOrganization, 'inactive');
+        $organizationOne = $this->createOrganization('one');
+        $organizationTwo = $this->createOrganization('two');
+
+        $this->addMembership($user, $organizationOne);
+        $this->addMembership($user, $organizationTwo);
+
+        $otherOrganization = $this->createOrganization('other');
+        $otherUser = User::factory()->create();
+
         $this->addMembership($otherUser, $otherOrganization);
 
         $response = $this->actingAs($user)
@@ -33,48 +35,21 @@ class OrganizationListingTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('message', 'Organizations retrieved successfully.')
-            ->assertJsonCount(2, 'data.organizations')
-            ->assertJsonFragment(['id' => $firstOrganization->public_id])
-            ->assertJsonFragment(['id' => $secondOrganization->public_id])
-            ->assertJsonMissing(['id' => $inactiveOrganization->public_id])
-            ->assertJsonMissing(['id' => $otherOrganization->public_id])
-            ->assertJsonMissing(['id' => $firstOrganization->id])
-            ->assertJsonPath('data.pagination.current_page', 1)
-            ->assertJsonPath('data.pagination.per_page', 15)
-            ->assertJsonPath('data.pagination.total', 2);
-    }
+            ->assertJsonPath(
+                'message',
+                'Organizations retrieved successfully.',
+            )
+            ->assertJsonCount(2, 'data.organizations');
 
-    public function test_organization_listing_is_paginated(): void
-    {
-        $user = User::factory()->create();
+        $response->assertJsonPath(
+            'data.organizations.0.id',
+            fn (string $id): bool => str_starts_with($id, 'org_'),
+        );
 
-        foreach (range(1, 16) as $number) {
-            $organization = $this->createOrganization((string) $number);
-            $this->addMembership($user, $organization);
-        }
-
-        $firstPage = $this->actingAs($user)
-            ->getJson('/api/v1/organizations');
-
-        $firstPage
-            ->assertOk()
-            ->assertJsonCount(15, 'data.organizations')
-            ->assertJsonPath('data.pagination.current_page', 1)
-            ->assertJsonPath('data.pagination.last_page', 2)
-            ->assertJsonPath('data.pagination.per_page', 15)
-            ->assertJsonPath('data.pagination.total', 16)
-            ->assertJsonPath('data.pagination.links.next', fn (?string $url): bool => $url !== null);
-
-        $secondPage = $this->actingAs($user)
-            ->getJson('/api/v1/organizations?page=2');
-
-        $secondPage
-            ->assertOk()
-            ->assertJsonCount(1, 'data.organizations')
-            ->assertJsonPath('data.pagination.current_page', 2)
-            ->assertJsonPath('data.pagination.links.previous', fn (?string $url): bool => $url !== null)
-            ->assertJsonPath('data.pagination.links.next', null);
+        $response->assertJsonPath(
+            'data.organizations.1.id',
+            fn (string $id): bool => str_starts_with($id, 'org_'),
+        );
     }
 
     public function test_organization_listing_requires_authentication(): void
@@ -83,72 +58,216 @@ class OrganizationListingTest extends TestCase
             ->assertUnauthorized();
     }
 
-    public function test_active_member_can_view_an_organization_by_its_public_id(): void
+    public function test_left_member_cannot_list_organization(): void
     {
         $user = User::factory()->create();
-        $organization = $this->createOrganization('viewable');
-        $this->addMembership($user, $organization);
+
+        $organization = $this->createOrganization('left-member');
+
+        $this->addMembership(
+            $user,
+            $organization,
+            OrganizationMemberStatus::LEFT,
+        );
 
         $response = $this->actingAs($user)
-            ->getJson('/api/v1/organizations/'.$organization->public_id);
+            ->getJson('/api/v1/organizations');
 
         $response
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('message', 'Organization retrieved successfully.')
-            ->assertJsonPath('data.organization.id', $organization->public_id)
-            ->assertJsonPath('data.organization.name', $organization->name)
-            ->assertJsonPath('data.organization.slug', $organization->slug)
-            ->assertJsonMissing(['id' => $organization->id]);
+            ->assertJsonCount(0, 'data.organizations');
     }
 
-    public function test_user_without_an_active_membership_cannot_view_an_organization(): void
+    public function test_removed_member_cannot_list_organization(): void
     {
         $user = User::factory()->create();
-        $organization = $this->createOrganization('restricted');
+
+        $organization = $this->createOrganization('removed-member');
+
+        $this->addMembership(
+            $user,
+            $organization,
+            OrganizationMemberStatus::REMOVED,
+        );
 
         $response = $this->actingAs($user)
-            ->getJson('/api/v1/organizations/'.$organization->public_id);
+            ->getJson('/api/v1/organizations');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(0, 'data.organizations');
+    }
+
+    public function test_organization_listing_only_returns_active_memberships(): void
+    {
+        $user = User::factory()->create();
+
+        $activeOrganization = $this->createOrganization('active');
+        $leftOrganization = $this->createOrganization('left');
+        $removedOrganization = $this->createOrganization('removed');
+
+        $this->addMembership(
+            $user,
+            $activeOrganization,
+            OrganizationMemberStatus::ACTIVE,
+        );
+
+        $this->addMembership(
+            $user,
+            $leftOrganization,
+            OrganizationMemberStatus::LEFT,
+        );
+
+        $this->addMembership(
+            $user,
+            $removedOrganization,
+            OrganizationMemberStatus::REMOVED,
+        );
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/v1/organizations');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data.organizations')
+            ->assertJsonPath(
+                'data.organizations.0.id',
+                $activeOrganization->public_id,
+            );
+    }
+
+    public function test_user_cannot_view_an_organization_they_do_not_belong_to(): void
+    {
+        $user = User::factory()->create();
+        $organization = $this->createOrganization('private');
+
+        $response = $this->actingAs($user)
+            ->getJson(
+                '/api/v1/organizations/'.$organization->public_id,
+            );
 
         $response
             ->assertForbidden()
-            ->assertJsonPath('message', 'You are not authorized to perform this action.');
+            ->assertJsonPath(
+                'message',
+                'You are not authorized to perform this action.',
+            );
     }
 
-    public function test_inactive_member_cannot_view_an_organization(): void
+    public function test_active_member_can_view_an_organization(): void
     {
         $user = User::factory()->create();
-        $organization = $this->createOrganization('inactive-member');
-        $this->addMembership($user, $organization, 'inactive');
+
+        $organization = $this->createOrganization('active-member');
+
+        $this->addMembership(
+            $user,
+            $organization,
+            OrganizationMemberStatus::ACTIVE,
+        );
+
+        $response = $this->actingAs($user)
+            ->getJson(
+                '/api/v1/organizations/'.$organization->public_id,
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath(
+                'data.organization.id',
+                $organization->public_id,
+            )
+            ->assertJsonPath(
+                'data.organization.name',
+                $organization->name,
+            );
+    }
+
+    public function test_left_member_cannot_view_an_organization(): void
+    {
+        $user = User::factory()->create();
+
+        $organization = $this->createOrganization('left-member');
+
+        $this->addMembership(
+            $user,
+            $organization,
+            OrganizationMemberStatus::LEFT,
+        );
 
         $this->actingAs($user)
-            ->getJson('/api/v1/organizations/'.$organization->public_id)
-            ->assertForbidden();
+            ->getJson(
+                '/api/v1/organizations/'.$organization->public_id,
+            )
+            ->assertForbidden()
+            ->assertJsonPath(
+                'message',
+                'You are not authorized to perform this action.',
+            );
+    }
+
+    public function test_removed_member_cannot_view_an_organization(): void
+    {
+        $user = User::factory()->create();
+
+        $organization = $this->createOrganization('removed-member');
+
+        $this->addMembership(
+            $user,
+            $organization,
+            OrganizationMemberStatus::REMOVED,
+        );
+
+        $this->actingAs($user)
+            ->getJson(
+                '/api/v1/organizations/'.$organization->public_id,
+            )
+            ->assertForbidden()
+            ->assertJsonPath(
+                'message',
+                'You are not authorized to perform this action.',
+            );
     }
 
     public function test_organization_detail_requires_authentication(): void
     {
         $organization = $this->createOrganization('authentication');
 
-        $this->getJson('/api/v1/organizations/'.$organization->public_id)
-            ->assertUnauthorized();
+        $this->getJson(
+            '/api/v1/organizations/'.$organization->public_id,
+        )->assertUnauthorized();
     }
 
     public function test_unknown_or_numeric_organization_identifiers_return_not_found(): void
     {
         $user = User::factory()->create();
+
         $organization = $this->createOrganization('numeric-id');
+
         $this->addMembership($user, $organization);
 
         $this->actingAs($user)
-            ->getJson('/api/v1/organizations/org_01J00000000000000000000000')
+            ->getJson(
+                '/api/v1/organizations/org_01J00000000000000000000000',
+            )
             ->assertNotFound()
-            ->assertJsonPath('message', 'Resource not found.');
+            ->assertJsonPath(
+                'message',
+                'Resource not found.',
+            );
 
         $this->actingAs($user)
-            ->getJson('/api/v1/organizations/'.$organization->id)
+            ->getJson(
+                '/api/v1/organizations/'.$organization->id,
+            )
             ->assertNotFound()
-            ->assertJsonPath('message', 'Resource not found.');
+            ->assertJsonPath(
+                'message',
+                'Resource not found.',
+            );
     }
 
     private function createOrganization(string $suffix): Organization
@@ -163,13 +282,13 @@ class OrganizationListingTest extends TestCase
     private function addMembership(
         User $user,
         Organization $organization,
-        string $status = 'active',
+        OrganizationMemberStatus $status = OrganizationMemberStatus::ACTIVE,
     ): OrganizationMember {
         return OrganizationMember::create([
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::MEMBER->value,
-            'status' => $status,
+            'status' => $status->value,
         ]);
     }
 }

@@ -148,7 +148,7 @@ class OrganizationInvitationListingTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_inactive_member_cannot_list_invitations(): void
+    public function test_left_member_cannot_list_invitations(): void
     {
         $user = User::factory()->create();
         $organization = Organization::factory()->create();
@@ -157,7 +157,7 @@ class OrganizationInvitationListingTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
             'role' => OrganizationMemberRole::ADMIN->value,
-            'status' => 'inactive',
+            'status' => 'left',
         ]);
 
         $response = $this->actingAs($user)
