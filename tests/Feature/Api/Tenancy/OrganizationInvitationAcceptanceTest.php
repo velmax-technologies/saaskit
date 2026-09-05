@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Tenancy;
 
 use App\Enums\OrganizationInvitationStatus;
+use App\Enums\OrganizationMemberStatus;
 use App\Enums\OrganizationMemberRole;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
@@ -568,5 +569,131 @@ class OrganizationInvitationAcceptanceTest extends TestCase
             $membership->public_id,
         );
 
+    }
+
+    public function test_left_member_can_accept_a_new_invitation(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->createOwner($organization);
+
+        $invitedUser = User::factory()->create();
+
+        $membership = OrganizationMember::factory()
+            ->member()
+            ->left()
+            ->create([
+                'user_id' => $invitedUser->id,
+                'organization_id' => $organization->id,
+            ]);
+
+        $token = Str::random(64);
+
+        $invitation = $this->createInvitation(
+            invitedUser: $invitedUser,
+            organization: $organization,
+            token: $token,
+        );
+
+        $response = $this->actingAs($invitedUser)
+            ->postJson(
+                "/api/v1/invitations/{$invitation->public_id}/accept",
+                ['token' => $token],
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.membership.id',
+                $membership->public_id,
+            );
+
+        $membership = $membership->fresh();
+
+        $this->assertSame(
+            OrganizationMemberStatus::ACTIVE,
+            $membership->status,
+        );
+
+        $this->assertSame(
+            OrganizationMemberRole::MEMBER,
+            $membership->role,
+        );
+
+        $this->assertSame(
+            1,
+            OrganizationMember::query()
+                ->where('organization_id', $organization->id)
+                ->where('user_id', $invitedUser->id)
+                ->count(),
+        );
+
+        $this->assertSame(
+            OrganizationInvitationStatus::ACCEPTED,
+            $invitation->fresh()->status,
+        );
+    }
+
+    public function test_removed_member_can_accept_a_new_invitation(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->createOwner($organization);
+
+        $invitedUser = User::factory()->create();
+
+        $membership = OrganizationMember::factory()
+            ->member()
+            ->removed()
+            ->create([
+                'user_id' => $invitedUser->id,
+                'organization_id' => $organization->id,
+            ]);
+
+        $token = Str::random(64);
+
+        $invitation = $this->createInvitation(
+            invitedUser: $invitedUser,
+            organization: $organization,
+            token: $token,
+        );
+
+        $response = $this->actingAs($invitedUser)
+            ->postJson(
+                "/api/v1/invitations/{$invitation->public_id}/accept",
+                ['token' => $token],
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath(
+                'data.membership.id',
+                $membership->public_id,
+            );
+
+        $membership = $membership->fresh();
+
+        $this->assertSame(
+            OrganizationMemberStatus::ACTIVE,
+            $membership->status,
+        );
+
+        $this->assertSame(
+            OrganizationMemberRole::MEMBER,
+            $membership->role,
+        );
+
+        $this->assertSame(
+            1,
+            OrganizationMember::query()
+                ->where('organization_id', $organization->id)
+                ->where('user_id', $invitedUser->id)
+                ->count(),
+        );
+
+        $this->assertSame(
+            OrganizationInvitationStatus::ACCEPTED,
+            $invitation->fresh()->status,
+        );
     }
 }

@@ -8,6 +8,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Enums\OrganizationMemberStatus;
 
 final class AcceptOrganizationInvitation
 {
@@ -62,9 +63,13 @@ final class AcceptOrganizationInvitation
             $existingMembership = OrganizationMember::query()
                 ->where('organization_id', $invitation->organization_id)
                 ->where('user_id', $user->id)
-                ->exists();
+                ->lockForUpdate()
+                ->first();
 
-            if ($existingMembership) {
+            if (
+                $existingMembership
+                && $existingMembership->status === OrganizationMemberStatus::ACTIVE
+            ) {
                 throw ValidationException::withMessages([
                     'invitation' => [
                         'You are already a member of this organization.',
@@ -72,12 +77,24 @@ final class AcceptOrganizationInvitation
                 ]);
             }
 
-            $membership = OrganizationMember::create([
-                'user_id' => $user->id,
-                'organization_id' => $invitation->organization_id,
-                'role' => $invitation->role->value,
-                'status' => 'active',
-            ]);
+            if ($existingMembership) {
+                $existingMembership->update([
+                    'role' => $invitation->role->value,
+                    'status' => OrganizationMemberStatus::ACTIVE->value,
+                ]);
+
+                $membership = $existingMembership->fresh([
+                    'user',
+                    'organization',
+                ]);
+            } else {
+                $membership = OrganizationMember::create([
+                    'user_id' => $user->id,
+                    'organization_id' => $invitation->organization_id,
+                    'role' => $invitation->role->value,
+                    'status' => OrganizationMemberStatus::ACTIVE->value,
+                ]);
+            }
 
             $invitation->update([
                 'status' => OrganizationInvitationStatus::ACCEPTED->value,
