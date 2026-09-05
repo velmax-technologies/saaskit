@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
+use App\Support\Tenancy\CurrentOrganization;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -82,6 +83,11 @@ class AppServiceProvider extends ServiceProvider
                 ],
             );
         });
+
+        $this->app->singleton(
+            CurrentOrganization::class,
+            fn (): CurrentOrganization => new CurrentOrganization(),
+        );
 
     }
 }

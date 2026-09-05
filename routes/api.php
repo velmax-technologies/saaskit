@@ -102,75 +102,52 @@ Route::prefix('v1')->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Organizations - Protected
+    | Auth Sanctum - Protected
     |--------------------------------------------------------------------------
     */
 
     Route::middleware('auth:sanctum')
-        ->prefix('organizations')
-        ->group(function (): void {
+    ->prefix('organizations')
+    ->group(function (): void {
 
-            // Organization routes
-            Route::get('/', [
-                OrganizationController::class,
-                'index',
-            ]);
+        // Organization collection routes.
+        Route::get('/', [
+            OrganizationController::class,
+            'index',
+        ]);
 
-            Route::post('/', [
-                OrganizationController::class,
-                'store',
-            ]);
+        Route::post('/', [
+            OrganizationController::class,
+            'store',
+        ]);
+
+        // Tenant-scoped organization routes.
+        Route::middleware('organization')->group(function (): void {
 
             Route::get('/{organization}', [
                 OrganizationController::class,
                 'show',
             ]);
 
-            Route::post(
-                '/{organization}/ownership/transfer',
-                [
-                    OrganizationController::class,
-                    'transferOwnership',
-                ],
-            );
-
-            Route::post(
-                '/{organization}/leave',
-                [
-                    OrganizationController::class,
-                    'leave',
-                ],
-            );
-
-            Route::post('/{organization}/rejoin', [
+            Route::post('/{organization}/leave', [
                 OrganizationController::class,
-                'rejoin',
+                'leave',
             ]);
-
-            /*
-            |--------------------------------------------------------------------------
-            | Organization Members
-            |--------------------------------------------------------------------------
-            */
 
             Route::get('/{organization}/members', [
                 OrganizationMemberController::class,
                 'index',
             ]);
+
             Route::patch('/{organization}/members/{member}', [
                 OrganizationMemberController::class,
                 'update',
             ]);
+
             Route::delete('/{organization}/members/{member}', [
                 OrganizationMemberController::class,
                 'destroy',
             ]);
-
-            /*
-            |--------------------------------------------------------------------------
-            | Organization Invitations
-            |--------------------------------------------------------------------------
-            */
 
             Route::post('/{organization}/invitations', [
                 OrganizationInvitationController::class,
@@ -197,7 +174,21 @@ Route::prefix('v1')->group(function (): void {
                     'cancel',
                 ],
             );
+
+            Route::post(
+                '/{organization}/ownership/transfer',
+                [
+                    OrganizationController::class,
+                    'transferOwnership',
+                ],
+            );
+
+            Route::post('/{organization}/rejoin', [
+                OrganizationController::class,
+                'rejoin',
+            ]);
         });
+    });
 
     /*
     |--------------------------------------------------------------------------
