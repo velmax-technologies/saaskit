@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use App\Support\Api\ApiAbility;
 use App\Support\Api\ApiResponse;
@@ -28,7 +29,7 @@ class AuthController extends Controller
         return ApiResponse::success(
             'Registration successful.',
             [
-                'user' => $user,
+                'user' => new UserResource($user),
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -56,7 +57,7 @@ class AuthController extends Controller
         return ApiResponse::success(
             'Login successful.',
             [
-                'user' => $user,
+                'user' => new UserResource($user),
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -110,7 +111,7 @@ class AuthController extends Controller
         return ApiResponse::success(
             'Authenticated user retrieved successfully.',
             [
-                'user' => $request->user(),
+                'user' => new UserResource($request->user()),
             ],
         );
     }

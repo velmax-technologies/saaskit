@@ -24,6 +24,10 @@ class AuthTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user.email', 'test@example.com')
+            ->assertJsonPath(
+                'data.user.id',
+                fn ($id) => is_string($id) && str_starts_with($id, 'usr_'),
+            )
             ->assertJsonPath('data.token_type', 'Bearer')
             ->assertJsonStructure([
                 'success',
@@ -38,6 +42,15 @@ class AuthTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
         ]);
+
+        $createdUser = User::query()
+            ->where('email', 'test@example.com')
+            ->firstOrFail();
+
+        $this->assertNotSame(
+            (string) $createdUser->id,
+            $response->json('data.user.id'),
+        );
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
     }
@@ -58,7 +71,16 @@ class AuthTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user.email', 'test@example.com')
+            ->assertJsonPath(
+                'data.user.id',
+                $user->public_id,
+            )
             ->assertJsonPath('data.token_type', 'Bearer');
+
+        $this->assertNotSame(
+            (string) $user->id,
+            $response->json('data.user.id'),
+        );
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
     }
@@ -108,12 +130,19 @@ class AuthTest extends TestCase
         $user = User::factory()->create();
         $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
 
-        $this->withToken($token)
-            ->getJson('/api/v1/me')
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/me');
+
+        $response
             ->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.user.id', $user->id)
+            ->assertJsonPath('data.user.id', $user->public_id)
             ->assertJsonPath('data.user.email', $user->email);
+
+        $this->assertNotSame(
+            (string) $user->id,
+            $response->json('data.user.id'),
+        );
     }
 
     public function test_api_token_contains_profile_read_ability(): void
