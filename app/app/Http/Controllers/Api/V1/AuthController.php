@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Api\ApiAbility;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class AuthController extends Controller
 
         $user = User::create($validated);
 
-        $token = $user->createToken('api')->plainTextToken;
+        $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
 
         return ApiResponse::success(
             'Registration successful.',
@@ -50,7 +51,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('api')->plainTextToken;
+        $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
 
         return ApiResponse::success(
             'Login successful.',

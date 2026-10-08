@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
+use App\Support\Api\ApiAbility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -87,16 +88,43 @@ class AuthTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_token_without_profile_read_ability_cannot_view_me(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('limited', ['some:other:ability'])->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/v1/me')
+            ->assertForbidden()
+            ->assertJson([
+                'success' => false,
+                'message' => 'Invalid ability provided.',
+                'errors' => null,
+            ]);
+    }
+
     public function test_authenticated_user_can_view_me(): void
     {
         $user = User::factory()->create();
+        $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
 
-        $this->actingAs($user, 'sanctum')
+        $this->withToken($token)
             ->getJson('/api/v1/me')
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user.id', $user->id)
             ->assertJsonPath('data.user.email', $user->email);
+    }
+
+    public function test_api_token_contains_profile_read_ability(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('api', [ApiAbility::PROFILE_READ]);
+
+        $this->assertSame(
+            [ApiAbility::PROFILE_READ],
+            $token->accessToken->abilities,
+        );
     }
 
     public function test_user_can_logout(): void
