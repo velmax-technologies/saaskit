@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -193,6 +194,197 @@ class OrganizationTest extends TestCase
         $response
             ->assertJsonMissingPath('data.members.0.organization_id')
             ->assertJsonMissingPath('data.members.0.user_id');
+    }
+
+    public function test_owner_can_add_an_organization_member(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $response = $this->actingAs($owner, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => $member->public_id,
+                ],
+            );
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.member.user.id', $member->public_id)
+            ->assertJsonPath('data.member.organization.id', $organization->public_id)
+            ->assertJsonPath('data.member.role', Organization::ROLE_MEMBER)
+            ->assertJsonMissingPath('data.member.database_id')
+            ->assertJsonMissingPath('data.member.organization_id')
+            ->assertJsonMissingPath('data.member.user_id');
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->first();
+
+        $this->assertNotNull($membership);
+        $this->assertStringStartsWith('mem_', $membership->public_id);
+    }
+
+    public function test_admin_can_add_an_organization_member(): void
+    {
+        $admin = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => $member->public_id,
+                    'role' => Organization::ROLE_ADMIN,
+                ],
+            );
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.member.user.id', $member->public_id)
+            ->assertJsonPath('data.member.role', Organization::ROLE_ADMIN);
+    }
+
+    public function test_regular_member_cannot_add_an_organization_member(): void
+    {
+        $existingMember = User::factory()->create();
+        $newMember = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($existingMember, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $response = $this->actingAs($existingMember, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => $newMember->public_id,
+                ],
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseMissing('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $newMember->id,
+        ]);
+    }
+
+    public function test_unauthenticated_user_cannot_add_an_organization_member(): void
+    {
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $response = $this->postJson(
+            "/api/v1/organizations/{$organization->public_id}/members",
+            [
+                'user_id' => $member->public_id,
+            ],
+        );
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_adding_nonexistent_public_user_id_is_rejected(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $response = $this->actingAs($owner, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => 'usr_01INVALIDUSERID000000000000',
+                ],
+            );
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_numeric_user_id_cannot_be_used_to_add_a_member(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $response = $this->actingAs($owner, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => (string) $member->id,
+                ],
+            );
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseMissing('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $member->id,
+        ]);
+    }
+
+    public function test_duplicate_organization_membership_is_rejected(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $response = $this->actingAs($owner, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => $member->public_id,
+                ],
+            );
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath(
+                'message',
+                'User is already a member of this organization.',
+            );
+
+        $this->assertSame(
+            2,
+            Membership::query()
+                ->where('organization_id', $organization->id)
+                ->count(),
+        );
     }
 
     public function test_organization_members_require_membership(): void

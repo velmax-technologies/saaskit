@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\StoreOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
 use App\Http\Resources\Api\V1\MembershipResource;
 use App\Http\Resources\Api\V1\OrganizationResource;
 use App\Models\Membership;
 use App\Models\Organization;
+use App\Models\User;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,6 +28,41 @@ class OrganizationController extends Controller
             [
                 'organizations' => OrganizationResource::collection($organizations),
             ],
+        );
+    }
+
+    public function storeMember(
+        StoreOrganizationMemberRequest $request,
+        Organization $organization,
+    ): JsonResponse {
+        $user = User::query()
+            ->where('public_id', $request->validated('user_id'))
+            ->firstOrFail();
+
+        if ($organization->users()->whereKey($user->getKey())->exists()) {
+            return ApiResponse::error(
+                'User is already a member of this organization.',
+                [],
+                422,
+            );
+        }
+
+        $organization->users()->attach($user, [
+            'role' => $request->validated('role', Organization::ROLE_MEMBER),
+        ]);
+
+        $membership = Membership::query()
+            ->with(['organization', 'user'])
+            ->where('organization_id', $organization->getKey())
+            ->where('user_id', $user->getKey())
+            ->firstOrFail();
+
+        return ApiResponse::success(
+            'Organization member added successfully.',
+            [
+                'member' => new MembershipResource($membership),
+            ],
+            201,
         );
     }
 
