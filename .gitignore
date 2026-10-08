@@ -1,0 +1,8 @@
+/.env
+/app/.env
+/app/vendor/
+/app/node_modules/
+/app/storage/*.key
+*.log
+.DS_Store
+compose.yml.broken-20261008
