@@ -1,14 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Support\Api\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/health', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'SaaSKit API is healthy.',
-        ]);
+        return ApiResponse::success('SaaSKit API is healthy.');
     });
 
     Route::prefix('auth')->group(function (): void {
