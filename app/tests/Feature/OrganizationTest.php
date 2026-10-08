@@ -12,6 +12,25 @@ class OrganizationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_organization_generates_prefixed_public_id(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->assertNotNull($organization->public_id);
+        $this->assertStringStartsWith('org_', $organization->public_id);
+        $this->assertSame('public_id', $organization->getRouteKeyName());
+        $this->assertSame($organization->public_id, $organization->getRouteKey());
+        $this->assertNotSame((string) $organization->id, $organization->public_id);
+    }
+
+    public function test_organization_public_ids_are_unique(): void
+    {
+        $first = Organization::factory()->create();
+        $second = Organization::factory()->create();
+
+        $this->assertNotSame($first->public_id, $second->public_id);
+    }
+
     public function test_user_can_belong_to_an_organization(): void
     {
         $user = User::factory()->create();

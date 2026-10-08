@@ -22,6 +22,59 @@ class OrganizationTest extends TestCase
         ])->assertUnauthorized();
     }
 
+    public function test_created_organization_exposes_public_id_and_not_database_id(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/organizations', [
+                'name' => 'Public ID Test Organization',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.organization.id', fn ($id) => is_string($id) && str_starts_with($id, 'org_'))
+            ->assertJsonMissingPath('data.organization.database_id');
+
+        $organization = Organization::query()
+            ->where('name', 'Public ID Test Organization')
+            ->firstOrFail();
+
+        $response->assertJsonPath(
+            'data.organization.id',
+            $organization->public_id
+        );
+
+        $this->assertNotSame(
+            (string) $organization->id,
+            $response->json('data.organization.id')
+        );
+    }
+
+    public function test_organization_list_exposes_public_id_and_not_database_id(): void
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $user->organizations()->attach($organization, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/organizations');
+
+        $response->assertOk()
+            ->assertJsonPath(
+                'data.organizations.0.id',
+                $organization->public_id
+            )
+            ->assertJsonMissingPath('data.organizations.0.database_id');
+
+        $this->assertNotSame(
+            (string) $organization->id,
+            $response->json('data.organizations.0.id')
+        );
+    }
+
     public function test_authenticated_user_can_create_an_organization(): void
     {
         $user = User::factory()->create();

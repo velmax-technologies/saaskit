@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
+use App\Http\Resources\Api\V1\OrganizationResource;
 use App\Models\Organization;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class OrganizationController extends Controller
         return ApiResponse::success(
             'Organizations retrieved successfully.',
             [
-                'organizations' => $organizations,
+                'organizations' => OrganizationResource::collection($organizations),
             ],
         );
     }
@@ -37,7 +38,7 @@ class OrganizationController extends Controller
         return ApiResponse::success(
             'Organization created successfully.',
             [
-                'organization' => $organization,
+                'organization' => new OrganizationResource($organization),
                 'role' => Organization::ROLE_OWNER,
             ],
             201,
