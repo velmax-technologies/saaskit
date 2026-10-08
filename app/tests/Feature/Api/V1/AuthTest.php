@@ -207,6 +207,23 @@ class AuthTest extends TestCase
                 ],
             ]);
 
+        $apiToken = $token->accessToken;
+        $tokenIds = collect($response->json('data.tokens'))
+            ->pluck('id')
+            ->all();
+
+        $this->assertContains($apiToken->public_id, $tokenIds);
+
+        $this->assertNotContains(
+            (string) $apiToken->id,
+            $tokenIds,
+        );
+
+        foreach ($tokenIds as $tokenId) {
+            $this->assertIsString($tokenId);
+            $this->assertStringStartsWith('tok_', $tokenId);
+        }
+
         $response->assertJsonMissing([
             'token' => $token->plainTextToken,
         ]);
@@ -242,7 +259,7 @@ class AuthTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 2);
 
         $this->withToken($currentToken->plainTextToken)
-            ->deleteJson('/api/v1/auth/tokens/'.$revokeToken->accessToken->id)
+            ->deleteJson('/api/v1/auth/tokens/'.$revokeToken->accessToken->public_id)
             ->assertOk()
             ->assertJson([
                 'success' => true,
@@ -268,7 +285,7 @@ class AuthTest extends TestCase
         $otherToken = $otherUser->createToken('other', [ApiAbility::PROFILE_READ]);
 
         $this->withToken($userToken->plainTextToken)
-            ->deleteJson('/api/v1/auth/tokens/'.$otherToken->accessToken->id)
+            ->deleteJson('/api/v1/auth/tokens/'.$otherToken->accessToken->public_id)
             ->assertNotFound();
 
         $this->assertDatabaseHas('personal_access_tokens', [

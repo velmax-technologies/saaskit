@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\ApiTokenResource;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use App\Support\Api\ApiAbility;
@@ -76,30 +77,22 @@ class AuthController extends Controller
         $tokens = $request->user()
             ->tokens()
             ->latest('created_at')
-            ->get()
-            ->map(fn ($token) => [
-                'id' => $token->id,
-                'name' => $token->name,
-                'abilities' => $token->abilities,
-                'last_used_at' => $token->last_used_at,
-                'expires_at' => $token->expires_at,
-                'created_at' => $token->created_at,
-            ])
-            ->values();
+            ->get();
 
         return ApiResponse::success(
             'API tokens retrieved successfully.',
             [
-                'tokens' => $tokens,
+                'tokens' => ApiTokenResource::collection($tokens),
             ],
         );
     }
 
-    public function revokeToken(Request $request, int $token): JsonResponse
+    public function revokeToken(Request $request, string $token): JsonResponse
     {
         $apiToken = $request->user()
             ->tokens()
-            ->findOrFail($token);
+            ->where('public_id', $token)
+            ->firstOrFail();
 
         $apiToken->delete();
 
