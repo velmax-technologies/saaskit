@@ -13,10 +13,13 @@ RUN apk add --no-cache \
 RUN docker-php-ext-install \
     bcmath \
     intl \
-    mbstring \
-    opcache \
     pdo_mysql \
     zip
+
+RUN apk add --no-cache --virtual .redis-build-deps $PHPIZE_DEPS linux-headers \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .redis-build-deps
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
