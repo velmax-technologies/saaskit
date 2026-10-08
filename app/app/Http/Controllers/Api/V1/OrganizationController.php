@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
+use App\Http\Resources\Api\V1\MembershipResource;
 use App\Http\Resources\Api\V1\OrganizationResource;
+use App\Models\Membership;
 use App\Models\Organization;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +25,32 @@ class OrganizationController extends Controller
             'Organizations retrieved successfully.',
             [
                 'organizations' => OrganizationResource::collection($organizations),
+            ],
+        );
+    }
+
+    public function members(
+        Request $request,
+        Organization $organization,
+    ): JsonResponse {
+        abort_unless(
+            $request->user()
+                ->organizations()
+                ->whereKey($organization->getKey())
+                ->exists(),
+            404,
+        );
+
+        $memberships = Membership::query()
+            ->with(['organization', 'user'])
+            ->where('organization_id', $organization->getKey())
+            ->latest('created_at')
+            ->get();
+
+        return ApiResponse::success(
+            'Organization members retrieved successfully.',
+            [
+                'members' => MembershipResource::collection($memberships),
             ],
         );
     }

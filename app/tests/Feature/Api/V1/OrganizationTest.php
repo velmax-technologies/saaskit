@@ -144,6 +144,107 @@ class OrganizationTest extends TestCase
             ->assertJsonValidationErrors(['slug']);
     }
 
+    public function test_organization_members_expose_public_ids(): void
+    {
+        $user = User::factory()->create();
+        $member = User::factory()->create();
+
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach([
+            $user->id => [
+                'role' => Organization::ROLE_OWNER,
+            ],
+            $member->id => [
+                'role' => Organization::ROLE_MEMBER,
+            ],
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson(
+            '/api/v1/organizations/'.$organization->public_id.'/members',
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(2, 'data.members');
+
+        $members = $response->json('data.members');
+
+        foreach ($members as $membership) {
+            $this->assertIsString($membership['id']);
+            $this->assertStringStartsWith('mem_', $membership['id']);
+
+            $this->assertArrayNotHasKey('database_id', $membership);
+            $this->assertArrayNotHasKey('organization_id', $membership);
+            $this->assertArrayNotHasKey('user_id', $membership);
+
+            $this->assertArrayHasKey('user', $membership);
+            $this->assertStringStartsWith('usr_', $membership['user']['id']);
+
+            $this->assertArrayNotHasKey(
+                'database_id',
+                $membership['user'],
+            );
+        }
+
+        $response
+            ->assertJsonMissingPath('data.members.0.organization_id')
+            ->assertJsonMissingPath('data.members.0.user_id');
+    }
+
+    public function test_organization_members_require_membership(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($otherUser, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/v1/organizations/'.$organization->public_id.'/members',
+        )->assertNotFound();
+    }
+
+    public function test_organization_members_require_authentication(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->getJson(
+            '/api/v1/organizations/'.$organization->public_id.'/members',
+        )->assertUnauthorized();
+    }
+
+    public function test_organization_members_use_public_organization_id(): void
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($user, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson(
+            '/api/v1/organizations/'.$organization->public_id.'/members',
+        );
+
+        $response->assertOk();
+
+        $numericRoute = '/api/v1/organizations/'.$organization->id.'/members';
+
+        $this->getJson($numericRoute)
+            ->assertNotFound();
+    }
+
     public function test_user_can_only_list_organizations_they_belong_to(): void
     {
         $user = User::factory()->create();
