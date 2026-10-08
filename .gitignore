@@ -6,3 +6,4 @@
 *.log
 .DS_Store
 compose.yml.broken-20261008
+tmp/
