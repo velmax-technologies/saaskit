@@ -70,6 +70,41 @@ class AuthController extends Controller
         return ApiResponse::success('Logout successful.');
     }
 
+    public function tokens(Request $request): JsonResponse
+    {
+        $tokens = $request->user()
+            ->tokens()
+            ->latest('created_at')
+            ->get()
+            ->map(fn ($token) => [
+                'id' => $token->id,
+                'name' => $token->name,
+                'abilities' => $token->abilities,
+                'last_used_at' => $token->last_used_at,
+                'expires_at' => $token->expires_at,
+                'created_at' => $token->created_at,
+            ])
+            ->values();
+
+        return ApiResponse::success(
+            'API tokens retrieved successfully.',
+            [
+                'tokens' => $tokens,
+            ],
+        );
+    }
+
+    public function revokeToken(Request $request, int $token): JsonResponse
+    {
+        $apiToken = $request->user()
+            ->tokens()
+            ->findOrFail($token);
+
+        $apiToken->delete();
+
+        return ApiResponse::success('API token revoked successfully.');
+    }
+
     public function me(Request $request): JsonResponse
     {
         return ApiResponse::success(

@@ -141,4 +141,109 @@ class AuthTest extends TestCase
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
+
+    public function test_user_can_list_their_api_tokens(): void
+    {
+        $user = User::factory()->create();
+
+        $user->createToken('browser', [ApiAbility::PROFILE_READ]);
+        $user->createToken('mobile', ['profile:read', 'billing:read']);
+
+        $token = $user->createToken('api', [ApiAbility::PROFILE_READ]);
+
+        $response = $this->withToken($token->plainTextToken)
+            ->getJson('/api/v1/auth/tokens');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonFragment([
+                'name' => 'api',
+                'abilities' => [ApiAbility::PROFILE_READ],
+            ])
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    'tokens' => [
+                        '*' => [
+                            'id',
+                            'name',
+                            'abilities',
+                            'last_used_at',
+                            'expires_at',
+                            'created_at',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $response->assertJsonMissing([
+            'token' => $token->plainTextToken,
+        ]);
+    }
+
+    public function test_user_can_only_see_their_own_api_tokens(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $userToken = $user->createToken('my-token', [ApiAbility::PROFILE_READ]);
+        $otherUser->createToken('other-token', [ApiAbility::PROFILE_READ]);
+
+        $response = $this->withToken($userToken->plainTextToken)
+            ->getJson('/api/v1/auth/tokens');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.tokens.0.name', 'my-token');
+
+        $response->assertJsonMissing([
+            'name' => 'other-token',
+        ]);
+    }
+
+    public function test_user_can_revoke_their_api_token(): void
+    {
+        $user = User::factory()->create();
+
+        $currentToken = $user->createToken('current', [ApiAbility::PROFILE_READ]);
+        $revokeToken = $user->createToken('revoke-me', [ApiAbility::PROFILE_READ]);
+
+        $this->assertDatabaseCount('personal_access_tokens', 2);
+
+        $this->withToken($currentToken->plainTextToken)
+            ->deleteJson('/api/v1/auth/tokens/'.$revokeToken->accessToken->id)
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'message' => 'API token revoked successfully.',
+                'data' => null,
+            ]);
+
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $revokeToken->accessToken->id,
+        ]);
+
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'id' => $currentToken->accessToken->id,
+        ]);
+    }
+
+    public function test_user_cannot_revoke_another_users_api_token(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $userToken = $user->createToken('current', [ApiAbility::PROFILE_READ]);
+        $otherToken = $otherUser->createToken('other', [ApiAbility::PROFILE_READ]);
+
+        $this->withToken($userToken->plainTextToken)
+            ->deleteJson('/api/v1/auth/tokens/'.$otherToken->accessToken->id)
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'id' => $otherToken->accessToken->id,
+        ]);
+    }
 }

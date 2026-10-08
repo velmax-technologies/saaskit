@@ -16,12 +16,14 @@ Route::prefix('v1')->group(function (): void {
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout']);
+            Route::get('/tokens', [AuthController::class, 'tokens']);
+            Route::delete('/tokens/{token}', [AuthController::class, 'revokeToken']);
         });
     });
 
     Route::middleware([
         'auth:sanctum',
-        'abilities:' . ApiAbility::PROFILE_READ,
+        'abilities:'.ApiAbility::PROFILE_READ,
     ])->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
     });
