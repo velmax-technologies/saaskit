@@ -58,7 +58,7 @@ Edit `app/.env` and ensure its database configuration matches the root `.env` se
 
 ```dotenv
 APP_ENV=local
-APP_DEBUG=true
+APP_DEBUG=false
 APP_URL=http://localhost
 
 DB_CONNECTION=mysql
