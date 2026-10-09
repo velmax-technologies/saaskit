@@ -167,6 +167,14 @@ curl -i http://localhost/api/v1/health
 
 The example assumes the configured proxy or port mapping makes Nginx available at `localhost`.
 
+If you have not configured a host port or reverse proxy yet, check the endpoint from inside the Nginx container:
+
+```bash
+docker compose exec -T nginx wget -qO- http://127.0.0.1/api/v1/health
+```
+
+This checks the API through Nginx without publishing its port to the host.
+
 ## Development commands
 
 Run the automated test suite:
