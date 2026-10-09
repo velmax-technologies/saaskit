@@ -632,6 +632,133 @@ class OrganizationTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_update_organization_using_public_id(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create([
+            'name' => 'Old Name',
+            'slug' => 'old-name',
+        ]);
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson("/api/v1/organizations/{$organization->public_id}", [
+                'name' => 'New Name',
+                'slug' => 'new-name',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.organization.id', $organization->public_id)
+            ->assertJsonPath('data.organization.name', 'New Name')
+            ->assertJsonPath('data.organization.slug', 'new-name')
+            ->assertJsonMissingPath('data.organization.database_id');
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization->id,
+            'name' => 'New Name',
+            'slug' => 'new-name',
+        ]);
+    }
+
+    public function test_owner_can_update_organization_name_without_changing_slug(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create([
+            'name' => 'Old Name',
+            'slug' => 'keep-this-slug',
+        ]);
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson("/api/v1/organizations/{$organization->public_id}", [
+                'name' => 'Updated Name',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.organization.name', 'Updated Name')
+            ->assertJsonPath('data.organization.slug', 'keep-this-slug');
+    }
+
+    public function test_admin_cannot_update_organization_settings(): void
+    {
+        $admin = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson("/api/v1/organizations/{$organization->public_id}", [
+                'name' => 'Unauthorized Change',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization->id,
+            'name' => $organization->name,
+        ]);
+    }
+
+    public function test_non_member_cannot_update_organization_settings(): void
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/v1/organizations/{$organization->public_id}", [
+                'name' => 'Unauthorized Change',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization->id,
+            'name' => $organization->name,
+        ]);
+    }
+
+    public function test_organization_update_rejects_duplicate_slug(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create([
+            'slug' => 'my-organization',
+        ]);
+        Organization::factory()->create(['slug' => 'taken-slug']);
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson("/api/v1/organizations/{$organization->public_id}", [
+                'slug' => 'taken-slug',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['slug']);
+    }
+
+    public function test_organization_update_rejects_invalid_slug(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson("/api/v1/organizations/{$organization->public_id}", [
+                'slug' => 'invalid slug!',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['slug']);
+    }
+
     public function test_owner_can_remove_member_using_public_membership_id(): void
     {
         $owner = User::factory()->create();

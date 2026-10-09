@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\RemoveOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
 use App\Http\Requests\Api\V1\UpdateOrganizationMemberRequest;
+use App\Http\Requests\Api\V1\UpdateOrganizationRequest;
 use App\Http\Resources\Api\V1\MembershipResource;
 use App\Http\Resources\Api\V1\OrganizationResource;
 use App\Models\Membership;
@@ -121,6 +122,20 @@ class OrganizationController extends Controller
             'Organization members retrieved successfully.',
             [
                 'members' => MembershipResource::collection($memberships),
+            ],
+        );
+    }
+
+    public function update(
+        UpdateOrganizationRequest $request,
+        Organization $organization,
+    ): JsonResponse {
+        $organization->update($request->validated());
+
+        return ApiResponse::success(
+            'Organization updated successfully.',
+            [
+                'organization' => new OrganizationResource($organization->refresh()),
             ],
         );
     }
