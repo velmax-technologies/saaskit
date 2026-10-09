@@ -759,6 +759,88 @@ class OrganizationTest extends TestCase
             ->assertJsonValidationErrors(['slug']);
     }
 
+    public function test_owner_can_delete_organization_using_public_id(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $organizationId = $organization->id;
+
+        $this->actingAs($owner, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Organization deleted successfully.');
+
+        $this->assertDatabaseMissing('organizations', [
+            'id' => $organizationId,
+        ]);
+
+        $this->assertDatabaseMissing('organization_user', [
+            'organization_id' => $organizationId,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $owner->id,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $member->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_organization(): void
+    {
+        $admin = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization->id,
+        ]);
+    }
+
+    public function test_non_member_cannot_delete_organization(): void
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization->id,
+        ]);
+    }
+
+    public function test_organization_deletion_requires_authentication(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->deleteJson("/api/v1/organizations/{$organization->public_id}")
+            ->assertUnauthorized();
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization->id,
+        ]);
+    }
+
     public function test_owner_can_remove_member_using_public_membership_id(): void
     {
         $owner = User::factory()->create();
