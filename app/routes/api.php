@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AcceptOrganizationInvitationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationInvitationController;
 use App\Support\Api\ApiAbility;
 use App\Support\Api\ApiResponse;
 use Illuminate\Support\Facades\Route;
@@ -22,12 +24,20 @@ Route::prefix('v1')->group(function (): void {
         });
     });
 
+    Route::middleware('auth:sanctum')->post(
+        '/invitations/{invitation}/accept',
+        AcceptOrganizationInvitationController::class,
+    );
+
     Route::middleware('auth:sanctum')->prefix('organizations')->group(function (): void {
         Route::get('/', [OrganizationController::class, 'index']);
         Route::post('/', [OrganizationController::class, 'store']);
         Route::patch('/{organization}', [OrganizationController::class, 'update']);
         Route::patch('/{organization}/ownership', [OrganizationController::class, 'transferOwnership']);
         Route::delete('/{organization}', [OrganizationController::class, 'destroy']);
+        Route::get('/{organization}/invitations', [OrganizationInvitationController::class, 'index']);
+        Route::post('/{organization}/invitations', [OrganizationInvitationController::class, 'store']);
+        Route::delete('/{organization}/invitations/{invitation}', [OrganizationInvitationController::class, 'destroy']);
         Route::get('/{organization}/members', [OrganizationController::class, 'members']);
         Route::post('/{organization}/members', [OrganizationController::class, 'storeMember']);
         Route::patch('/{organization}/members/{membership}', [OrganizationController::class, 'updateMember']);

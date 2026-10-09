@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['name', 'slug'])]
 class Organization extends Model
@@ -23,6 +24,11 @@ class Organization extends Model
     public const ROLE_ADMIN = 'admin';
 
     public const ROLE_MEMBER = 'member';
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(OrganizationInvitation::class);
+    }
 
     public function users(): BelongsToMany
     {
