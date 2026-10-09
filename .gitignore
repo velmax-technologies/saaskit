@@ -7,3 +7,10 @@
 .DS_Store
 compose.yml.broken-20261008
 tmp/
+
+# Local/generated AI tooling files not intended for the public repository
+/app/.mcp.json
+/app/CLAUDE.md.pre-saaskit-cleanup
+/app/boost.json.pre-saaskit-cleanup
+/app/.claude/skills/deploying-to-cloud/
+/app/.claude/skills/infer-conventions/

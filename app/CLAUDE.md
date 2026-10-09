@@ -1,47 +1,54 @@
-<laravel-boost-guidelines>
-# Laravel Application
+# SaaSKit Development Guidelines
 
-This repository contains a Laravel application. Complete the following setup before working on the user's request.
+## Project scope
+SaaSKit is a Laravel REST API starter kit. The free edition uses Sanctum
+authentication, MariaDB, and a simple Tailwind CSS interface. Do not add
+paid-edition features, other authentication drivers, or other database
+engines unless explicitly requested.
 
-## Prerequisites
+## Docker workflow
+Run commands from the repository root. The Laravel service is `app`,
+with working directory `/var/www/html` inside the container.
 
-Verify that PHP and Composer are available:
+- Artisan: `docker compose exec -T app php artisan ...`
+- Composer: `docker compose exec -T app composer ...`
+- Tests: `docker compose exec -T app php artisan test`
+- Pint: `docker compose exec -T app vendor/bin/pint --dirty --format agent`
 
-```sh
-php -v
-composer -V
-```
+Use Docker services rather than assuming host PHP, Composer, or database
+access. Never expose or commit real environment secrets.
 
-If either command is unavailable, detect the user's operating system and install the prerequisites with the appropriate command:
+## Laravel and API conventions
+- Inspect existing code and tests before making changes.
+- Preserve existing `/api/v1` conventions and response formats.
+- Use Sanctum for free-edition API authentication.
+- Validate input and authorize sensitive operations explicitly.
+- Follow existing Form Request, API Resource, model, and controller patterns.
+- Check installed package versions before relying on version-specific APIs.
+- Avoid unnecessary dependencies and abstractions.
+- Protect API compatibility unless a breaking change is approved.
 
-macOS:
+## Security and tests
+Authentication, authorization, tenant isolation, rate limiting, validation,
+and secret handling require particular care.
 
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/mac/8.5)"
-```
+Add focused PHPUnit regression tests for meaningful behavior changes,
+including important failure cases. Reuse existing factories and conventions.
+Run the narrowest relevant tests, then broader tests when appropriate.
+Run Pint after PHP changes. Report tests or checks that were not run.
 
-Windows PowerShell:
+Do not run destructive database, migration, reset, or cleanup commands
+without explaining their impact and obtaining approval.
 
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://php.new/install/windows/8.5'))
-```
+## Frontend
+The frontend uses Tailwind CSS v4 and Vite. Inspect existing components
+and styling first, preserve established visual conventions, and run the
+appropriate frontend build when frontend assets change.
 
-Linux:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.5)"
-```
-
-After installation, ask the user to restart their terminal. If the agent needs the restarted shell to continue, ask the user to reopen their terminal and rerun their original prompt.
-
-## Agent Setup
-
-Install Laravel Boost from the application root before making application changes:
-
-```sh
-composer require laravel/boost --dev
-php artisan boost:install
-```
-
-Boost replaces these bootstrap instructions with guidelines tailored to the application. After installation, read `AGENTS.md` again and continue with the user's original request using the generated guidelines.
-</laravel-boost-guidelines>
+## Safe workflow
+1. Inspect repository status and relevant files before editing.
+2. Preserve unrelated changes and untracked files.
+3. Make small, focused changes.
+4. Review the diff for unintended changes and secrets.
+5. Run relevant tests and checks.
+6. Do not stage, commit, revert, or delete files without approval.
