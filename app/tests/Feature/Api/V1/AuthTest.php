@@ -55,6 +55,54 @@ class AuthTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 1);
     }
 
+    public function test_registration_rejects_duplicate_email(): void
+    {
+        User::factory()->create(['email' => 'existing@example.com']);
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Another User',
+            'email' => 'existing@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['email']);
+
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_registration_rejects_password_confirmation_mismatch(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Test User',
+            'email' => 'confirmation@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'different-password',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['password']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'confirmation@example.com',
+        ]);
+    }
+
+    public function test_login_rejects_missing_and_malformed_credentials(): void
+    {
+        $this->postJson('/api/v1/auth/login', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email', 'password']);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'not-an-email',
+            'password' => 'password123',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['email']);
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_logout_and_token_listing_require_authentication(): void
+    {
+        $this->postJson('/api/v1/auth/logout')->assertUnauthorized();
+        $this->getJson('/api/v1/auth/tokens')->assertUnauthorized();
+    }
+
     public function test_user_can_login(): void
     {
         $user = User::factory()->create([
