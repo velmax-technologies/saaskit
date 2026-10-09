@@ -22,7 +22,11 @@ RUN apk add --no-cache --virtual .redis-build-deps $PHPIZE_DEPS linux-headers \
     && apk del .redis-build-deps
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY entrypoint.sh /usr/local/bin/saaskit-entrypoint
+
+RUN chmod +x /usr/local/bin/saaskit-entrypoint
 
 WORKDIR /var/www/html
 
+ENTRYPOINT ["/usr/local/bin/saaskit-entrypoint"]
 CMD ["php-fpm"]

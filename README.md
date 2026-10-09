@@ -93,7 +93,7 @@ docker network create saaskit-proxy
 
 If your infrastructure already manages this network, reuse it rather than creating a duplicate.
 
-### 5. Build and start the services
+### 5. Build images and install PHP dependencies
 
 Validate the Compose configuration:
 
@@ -101,57 +101,63 @@ Validate the Compose configuration:
 docker compose config --quiet
 ```
 
-Build and start the containers:
+Build the PHP service images:
 
 ```bash
-docker compose up -d --build
+docker compose build app worker scheduler
+```
+Install PHP dependencies before starting the complete stack. This ensures the Laravel autoloader is available when the queue worker and scheduler start:
+
+```bash
+docker compose run --rm --no-deps \
+  --user "$(id -u):$(id -g)" \
+  -e COMPOSER_HOME=/tmp/composer \
+  app composer install --no-interaction --prefer-dist --optimize-autoloader
+```
+
+### 6. Start the services
+
+```bash
+docker compose up -d
 docker compose ps
 ```
 
 Check the logs if a service fails to start:
-
 ```bash
 docker compose logs --tail=100
 ```
 
-### 6. Initialize the application
+### 7. Initialize the application
 
 After verifying that `app/.env` points to the intended database, generate the application key:
 
 ```bash
 docker compose exec app php artisan key:generate
 ```
-
 Run database migrations:
-
 ```bash
 docker compose exec app php artisan migrate --force
 ```
-
 Back up any existing database before applying migrations.
 
-### 7. Build frontend assets when required
+### 8. Build frontend assets when required
 
 The PHP container does not include Node.js or npm. If you need to build frontend assets, use a host environment with Node.js and npm installed:
-
 ```bash
 cd app
 npm install
 npm run build
 cd ..
 ```
-
 The repository currently has no committed npm lockfile, so dependency versions may vary between installations.
 
-### 8. Access the API
+### 9. Access the API
 
 The default Compose configuration exposes Nginx to Docker networks but does not publish its port directly to the host.
 
 Access the API through a reverse proxy connected to `saaskit-proxy`, or configure an appropriate local development port mapping.
 
-Health endpoint:
-
-`GET /api/v1/health`
+Health endpoint: `GET /api/v1/health`
 
 Once a local port mapping or reverse proxy is configured, you can test the endpoint with:
 
