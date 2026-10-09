@@ -77,18 +77,42 @@ class OrganizationController extends Controller
         Organization $organization,
         Membership $membership,
     ): JsonResponse {
-        $membership->update([
-            'role' => $request->validated('role'),
-        ]);
+        return DB::transaction(function () use ($request, $organization, $membership): JsonResponse {
+            Organization::query()
+                ->whereKey($organization->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $membership->load(['organization', 'user']);
+            $actorMembership = Membership::query()
+                ->where('organization_id', $organization->getKey())
+                ->where('user_id', $request->user()->getKey())
+                ->lockForUpdate()
+                ->first();
 
-        return ApiResponse::success(
-            'Organization member role updated successfully.',
-            [
-                'member' => new MembershipResource($membership),
-            ],
-        );
+            $targetMembership = Membership::query()
+                ->where('organization_id', $organization->getKey())
+                ->whereKey($membership->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            abort_unless(
+                $this->canManageMembership($actorMembership, $targetMembership),
+                403,
+            );
+
+            $targetMembership->update([
+                'role' => $request->validated('role'),
+            ]);
+
+            $targetMembership->load(['organization', 'user']);
+
+            return ApiResponse::success(
+                'Organization member role updated successfully.',
+                [
+                    'member' => new MembershipResource($targetMembership),
+                ],
+            );
+        });
     }
 
     public function destroyMember(
@@ -96,11 +120,35 @@ class OrganizationController extends Controller
         Organization $organization,
         Membership $membership,
     ): JsonResponse {
-        $membership->delete();
+        return DB::transaction(function () use ($request, $organization, $membership): JsonResponse {
+            Organization::query()
+                ->whereKey($organization->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return ApiResponse::success(
-            'Organization member removed successfully.',
-        );
+            $actorMembership = Membership::query()
+                ->where('organization_id', $organization->getKey())
+                ->where('user_id', $request->user()->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            $targetMembership = Membership::query()
+                ->where('organization_id', $organization->getKey())
+                ->whereKey($membership->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            abort_unless(
+                $this->canManageMembership($actorMembership, $targetMembership),
+                403,
+            );
+
+            $targetMembership->delete();
+
+            return ApiResponse::success(
+                'Organization member removed successfully.',
+            );
+        });
     }
 
     public function members(
@@ -230,5 +278,19 @@ class OrganizationController extends Controller
             ],
             201,
         );
+    }
+
+    private function canManageMembership(
+        ?Membership $actorMembership,
+        ?Membership $targetMembership,
+    ): bool {
+        return $actorMembership !== null
+            && $targetMembership !== null
+            && (
+                ($actorMembership->role === Organization::ROLE_OWNER
+                    && $targetMembership->role !== Organization::ROLE_OWNER)
+                || ($actorMembership->role === Organization::ROLE_ADMIN
+                    && $targetMembership->role === Organization::ROLE_MEMBER)
+            );
     }
 }

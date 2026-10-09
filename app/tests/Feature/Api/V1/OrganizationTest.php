@@ -540,6 +540,38 @@ class OrganizationTest extends TestCase
             ->assertJsonPath('data.member.role', Organization::ROLE_ADMIN);
     }
 
+    public function test_admin_cannot_update_another_admin_role(): void
+    {
+        $admin = User::factory()->create();
+        $otherAdmin = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+        $organization->users()->attach($otherAdmin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $otherAdmin->id)
+            ->firstOrFail();
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+                ['role' => Organization::ROLE_MEMBER],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $otherAdmin->id,
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+    }
+
     public function test_regular_member_cannot_update_membership_role(): void
     {
         $actor = User::factory()->create();
@@ -1091,6 +1123,37 @@ class OrganizationTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseMissing('organization_user', ['id' => $membership->id]);
+    }
+
+    public function test_admin_cannot_remove_another_admin(): void
+    {
+        $admin = User::factory()->create();
+        $otherAdmin = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+        $organization->users()->attach($otherAdmin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $otherAdmin->id)
+            ->firstOrFail();
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $otherAdmin->id,
+            'role' => Organization::ROLE_ADMIN,
+        ]);
     }
 
     public function test_regular_member_cannot_remove_another_member(): void
