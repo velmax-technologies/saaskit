@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\RemoveOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
 use App\Http\Requests\Api\V1\UpdateOrganizationMemberRequest;
@@ -83,6 +84,18 @@ class OrganizationController extends Controller
             [
                 'member' => new MembershipResource($membership),
             ],
+        );
+    }
+
+    public function destroyMember(
+        RemoveOrganizationMemberRequest $request,
+        Organization $organization,
+        Membership $membership,
+    ): JsonResponse {
+        $membership->delete();
+
+        return ApiResponse::success(
+            'Organization member removed successfully.',
         );
     }
 

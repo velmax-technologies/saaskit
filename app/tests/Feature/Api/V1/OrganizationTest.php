@@ -631,4 +631,109 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_MEMBER,
         ]);
     }
+
+    public function test_owner_can_remove_member_using_public_membership_id(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, ['role' => Organization::ROLE_OWNER]);
+        $organization->users()->attach($member, ['role' => Organization::ROLE_MEMBER]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('organization_user', ['id' => $membership->id]);
+    }
+
+    public function test_admin_can_remove_regular_member(): void
+    {
+        $admin = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, ['role' => Organization::ROLE_ADMIN]);
+        $organization->users()->attach($member, ['role' => Organization::ROLE_MEMBER]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('organization_user', ['id' => $membership->id]);
+    }
+
+    public function test_regular_member_cannot_remove_another_member(): void
+    {
+        $actor = User::factory()->create();
+        $target = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($actor, ['role' => Organization::ROLE_MEMBER]);
+        $organization->users()->attach($target, ['role' => Organization::ROLE_MEMBER]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $target->id)
+            ->firstOrFail();
+
+        $this->actingAs($actor, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', ['id' => $membership->id]);
+    }
+
+    public function test_owner_membership_cannot_be_removed_through_member_endpoint(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, ['role' => Organization::ROLE_OWNER]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $owner->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', ['id' => $membership->id]);
+    }
+
+    public function test_membership_from_another_organization_cannot_be_removed(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+        $otherOrganization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, ['role' => Organization::ROLE_OWNER]);
+        $otherOrganization->users()->attach($member, ['role' => Organization::ROLE_MEMBER]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $otherOrganization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', ['id' => $membership->id]);
+    }
 }
