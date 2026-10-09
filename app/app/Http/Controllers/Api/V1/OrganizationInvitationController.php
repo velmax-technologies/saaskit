@@ -127,42 +127,67 @@ class OrganizationInvitationController extends Controller
     ): JsonResponse {
         $this->authorizeInvitationManagement($request, $organization);
 
-        abort_unless(
-            $invitation->organization_id === $organization->getKey(),
-            404,
-        );
+        $result = DB::transaction(function () use (
+            $organization,
+            $invitation,
+        ): array {
+            $lockedInvitation = OrganizationInvitation::query()
+                ->whereKey($invitation->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (
-            $invitation->accepted_at !== null
-            || $invitation->revoked_at !== null
-        ) {
+            if ($lockedInvitation->organization_id !== $organization->getKey()) {
+                abort(404);
+            }
+
+            if (
+                $lockedInvitation->accepted_at !== null
+                || $lockedInvitation->revoked_at !== null
+            ) {
+                return [
+                    'error' => 'Only unaccepted, non-revoked invitations can be resent.',
+                    'status' => 422,
+                ];
+            }
+
+            $token = Str::random(64);
+
+            $lockedInvitation->update([
+                'token_hash' => hash('sha256', $token),
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            $lockedInvitation->load(['organization', 'inviter']);
+
+            // Keep the row lock until delivery finishes so concurrent resend
+            // requests cannot invalidate a token while its email is being sent.
+            $delivered = $this->deliverInvitation($lockedInvitation, $token);
+
+            return [
+                'invitation' => $lockedInvitation,
+                'delivered' => $delivered,
+            ];
+        });
+
+        if (isset($result['error'])) {
             return ApiResponse::error(
-                'Only unaccepted, non-revoked invitations can be resent.',
+                $result['error'],
                 [],
-                422,
+                $result['status'],
             );
         }
 
-        $token = Str::random(64);
-
-        $invitation->update([
-            'token_hash' => hash('sha256', $token),
-            'expires_at' => now()->addDays(7),
-        ]);
-
-        $invitation->load(['organization', 'inviter']);
-
-        if (! $this->deliverInvitation($invitation, $token)) {
+        if (! $result['delivered']) {
             return ApiResponse::error(
                 'The invitation was updated, but the email could not be sent. Retry the resend request.',
-                ['invitation_id' => $invitation->public_id],
+                ['invitation_id' => $result['invitation']->public_id],
                 503,
             );
         }
 
         return ApiResponse::success(
             'Organization invitation resent successfully.',
-            ['invitation' => new OrganizationInvitationResource($invitation)],
+            ['invitation' => new OrganizationInvitationResource($result['invitation'])],
         );
     }
 

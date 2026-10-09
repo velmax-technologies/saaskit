@@ -506,6 +506,83 @@ class OrganizationInvitationApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_accepted_invitation_cannot_be_resent(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $organization = $this->createOrganizationWithRole($owner, Organization::ROLE_OWNER);
+        $invitation = $this->createInvitation($organization, $owner, 'invitee@example.com');
+        $invitation->update(['accepted_at' => now()]);
+        $originalHash = $invitation->token_hash;
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
+            ->assertUnprocessable();
+
+        $this->assertSame($originalHash, $invitation->fresh()->token_hash);
+        Notification::assertNothingSent();
+    }
+
+    public function test_revoked_invitation_cannot_be_resent(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $organization = $this->createOrganizationWithRole($owner, Organization::ROLE_OWNER);
+        $invitation = $this->createInvitation($organization, $owner, 'invitee@example.com');
+        $invitation->update(['revoked_at' => now()]);
+        $originalHash = $invitation->token_hash;
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
+            ->assertUnprocessable();
+
+        $this->assertSame($originalHash, $invitation->fresh()->token_hash);
+        Notification::assertNothingSent();
+    }
+
+    public function test_expired_invitation_can_be_resent_with_a_new_token_and_expiry(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $organization = $this->createOrganizationWithRole($owner, Organization::ROLE_OWNER);
+        $oldToken = 'expired-invitation-token';
+        $invitation = $this->createInvitation(
+            $organization,
+            $owner,
+            'invitee@example.com',
+            Organization::ROLE_MEMBER,
+            $oldToken,
+        );
+        $invitation->update(['expires_at' => now()->subMinute()]);
+        $oldHash = $invitation->token_hash;
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
+            ->assertOk();
+
+        $invitation->refresh();
+
+        $this->assertNotSame($oldHash, $invitation->token_hash);
+        $this->assertTrue($invitation->expires_at->isFuture());
+
+        $newToken = null;
+        Notification::assertSentOnDemand(
+            OrganizationInvitationNotification::class,
+            function (OrganizationInvitationNotification $notification) use (&$newToken): bool {
+                $newToken = $notification->token;
+
+                return true;
+            },
+        );
+
+        $this->assertNotNull($newToken);
+        $this->assertSame(hash('sha256', $newToken), $invitation->token_hash);
+        $this->assertNotSame($oldToken, $newToken);
+    }
+
     private function createOrganizationWithRole(
         User $user,
         string $role,
