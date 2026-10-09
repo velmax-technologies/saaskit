@@ -19,9 +19,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/login', [AuthController::class, 'login']);
 
         // Password reset endpoints are public; reset tokens authorize the change.
-        Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
-        Route::post('/reset-password', [PasswordResetController::class, 'reset']);
-
+        Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])
+            ->middleware('throttle:5,1');
+        Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+            ->middleware('throttle:5,1');
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout']);

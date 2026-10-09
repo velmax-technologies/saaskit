@@ -174,4 +174,44 @@ class PasswordResetTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['password']);
     }
+
+    public function test_forgot_password_is_rate_limited(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->withServerVariables([
+                'REMOTE_ADDR' => '203.0.113.21',
+            ])->postJson('/api/v1/auth/forgot-password', [
+                'email' => 'unknown@example.com',
+            ])->assertOk();
+        }
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.21',
+        ])->postJson('/api/v1/auth/forgot-password', [
+            'email' => 'unknown@example.com',
+        ])->assertStatus(429);
+    }
+
+    public function test_reset_password_is_rate_limited(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->withServerVariables([
+                'REMOTE_ADDR' => '203.0.113.22',
+            ])->postJson('/api/v1/auth/reset-password', [
+                'email' => 'reset@example.com',
+                'token' => 'invalid-token',
+                'password' => 'new-password-123',
+                'password_confirmation' => 'new-password-123',
+            ])->assertUnprocessable();
+        }
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.22',
+        ])->postJson('/api/v1/auth/reset-password', [
+            'email' => 'reset@example.com',
+            'token' => 'invalid-token',
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])->assertStatus(429);
+    }
 }
