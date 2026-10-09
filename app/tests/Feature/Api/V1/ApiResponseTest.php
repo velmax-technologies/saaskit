@@ -39,6 +39,7 @@ class ApiResponseTest extends TestCase
                 ],
             ]);
     }
+
     public function test_unauthenticated_api_request_uses_standard_error_response(): void
     {
         $response = $this->getJson('/api/v1/me');
@@ -77,5 +78,4 @@ class ApiResponseTest extends TestCase
                 'errors' => null,
             ]);
     }
-
 }
