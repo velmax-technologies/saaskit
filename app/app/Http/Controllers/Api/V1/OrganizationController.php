@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\DeleteOrganizationRequest;
 use App\Http\Requests\Api\V1\RemoveOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
+use App\Http\Requests\Api\V1\TransferOrganizationOwnershipRequest;
 use App\Http\Requests\Api\V1\UpdateOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\UpdateOrganizationRequest;
 use App\Http\Resources\Api\V1\MembershipResource;
@@ -17,6 +18,7 @@ use App\Models\User;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrganizationController extends Controller
 {
@@ -125,6 +127,66 @@ class OrganizationController extends Controller
                 'members' => MembershipResource::collection($memberships),
             ],
         );
+    }
+
+    public function transferOwnership(
+        TransferOrganizationOwnershipRequest $request,
+        Organization $organization,
+    ): JsonResponse {
+        return DB::transaction(function () use ($request, $organization): JsonResponse {
+            Organization::query()
+                ->whereKey($organization->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $currentOwner = Membership::query()
+                ->where('organization_id', $organization->getKey())
+                ->where('user_id', $request->user()->getKey())
+                ->where('role', Organization::ROLE_OWNER)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $currentOwner) {
+                return ApiResponse::error(
+                    'Only the current organization owner can transfer ownership.',
+                    [],
+                    403,
+                );
+            }
+
+            $newOwner = Membership::query()
+                ->where('organization_id', $organization->getKey())
+                ->where('public_id', $request->validated('membership_id'))
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($newOwner->getKey() === $currentOwner->getKey()) {
+                return ApiResponse::error(
+                    'The organization owner already owns this organization.',
+                    [],
+                    422,
+                );
+            }
+
+            $currentOwner->update([
+                'role' => Organization::ROLE_ADMIN,
+            ]);
+
+            $newOwner->update([
+                'role' => Organization::ROLE_OWNER,
+            ]);
+
+            $currentOwner->load(['organization', 'user']);
+            $newOwner->load(['organization', 'user']);
+
+            return ApiResponse::success(
+                'Organization ownership transferred successfully.',
+                [
+                    'previous_owner' => new MembershipResource($currentOwner),
+                    'new_owner' => new MembershipResource($newOwner),
+                ],
+            );
+        });
     }
 
     public function destroy(

@@ -841,6 +841,215 @@ class OrganizationTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_transfer_organization_ownership(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $targetMembership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/ownership",
+                ['membership_id' => $targetMembership->public_id],
+            )
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Organization ownership transferred successfully.')
+            ->assertJsonPath('data.previous_owner.role', Organization::ROLE_ADMIN)
+            ->assertJsonPath('data.previous_owner.user.id', $owner->public_id)
+            ->assertJsonPath('data.new_owner.role', Organization::ROLE_OWNER)
+            ->assertJsonPath('data.new_owner.user.id', $member->public_id)
+            ->assertJsonMissingPath('data.new_owner.database_id');
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $owner->id,
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $member->id,
+            'role' => Organization::ROLE_OWNER,
+        ]);
+    }
+
+    public function test_admin_cannot_transfer_organization_ownership(): void
+    {
+        $admin = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $targetMembership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/ownership",
+                ['membership_id' => $targetMembership->public_id],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $admin->id,
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $member->id,
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+    }
+
+    public function test_regular_member_cannot_transfer_organization_ownership(): void
+    {
+        $member = User::factory()->create();
+        $target = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+        $organization->users()->attach($target, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $targetMembership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $target->id)
+            ->firstOrFail();
+
+        $this->actingAs($member, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/ownership",
+                ['membership_id' => $targetMembership->public_id],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $member->id,
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+    }
+
+    public function test_unauthenticated_user_cannot_transfer_organization_ownership(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->patchJson(
+            "/api/v1/organizations/{$organization->public_id}/ownership",
+            ['membership_id' => 'mem_nonexistent'],
+        )->assertUnauthorized();
+    }
+
+    public function test_ownership_transfer_rejects_membership_from_another_organization(): void
+    {
+        $owner = User::factory()->create();
+        $otherMember = User::factory()->create();
+        $organization = Organization::factory()->create();
+        $otherOrganization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $otherOrganization->users()->attach($otherMember, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $targetMembership = Membership::query()
+            ->where('organization_id', $otherOrganization->id)
+            ->where('user_id', $otherMember->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/ownership",
+                ['membership_id' => $targetMembership->public_id],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['membership_id']);
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $owner->id,
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $otherOrganization->id,
+            'user_id' => $otherMember->id,
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+    }
+
+    public function test_owner_cannot_transfer_ownership_to_themselves(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $ownerMembership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $owner->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/ownership",
+                ['membership_id' => $ownerMembership->public_id],
+            )
+            ->assertUnprocessable();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $owner->id,
+            'role' => Organization::ROLE_OWNER,
+        ]);
+    }
+
+    public function test_ownership_transfer_requires_a_valid_membership_public_id(): void
+    {
+        $owner = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/ownership",
+                ['membership_id' => '123'],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['membership_id']);
+    }
+
     public function test_owner_can_remove_member_using_public_membership_id(): void
     {
         $owner = User::factory()->create();
