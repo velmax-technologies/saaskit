@@ -1,14 +1,6 @@
----
-name: laravel-best-practices
-description: "Apply this skill whenever writing, reviewing, or refactoring Laravel PHP code. This includes creating or modifying controllers, models, migrations, form requests, policies, jobs, scheduled commands, service classes, and Eloquent queries. Triggers for N+1 and query performance issues, caching strategies, authorization and security patterns, validation, error handling, queue and job configuration, route definitions, and architectural decisions. Also use for Laravel code reviews and refactoring existing Laravel code to follow best practices. Covers any task involving Laravel backend PHP code patterns."
-license: MIT
-metadata:
-  author: laravel
----
-
 # Laravel Best Practices
 
-Best practices for Laravel, organized as an index of rule files. Each rule file teaches what to do and why. For exact API syntax, verify with `search-docs`.
+Best practices for Laravel, organized as an index of rule files. Each rule file teaches what to do and why. For exact API syntax, consult the official documentation for the installed Laravel version.
 
 ## Consistency First
 
@@ -21,7 +13,7 @@ Check sibling files, related controllers, models, or tests for established patte
 1. Check the changed files, nearby code, project configuration, and relevant tests for established patterns. Deviate only for a correctness or security defect, and call the deviation out.
 2. Map every affected concern to the rule index below. Read each mapped rule file before editing. Skip unrelated rule files.
 3. Make the smallest coherent change. Keep the application's architecture and naming instead of introducing a second pattern for the same job.
-4. Verify version-sensitive Laravel APIs for the installed version with `search-docs`, or inspect the installed framework when it is unavailable.
+4. Verify version-sensitive Laravel APIs for the installed version using the official documentation, or inspect the installed framework when necessary.
 5. Run the narrowest relevant tests first, then the project's formatting and static-analysis checks when the change warrants them.
 6. Re-read the diff against every mapped rule before finishing.
 
@@ -48,7 +40,7 @@ Cross-cutting changes often need more than one rule file.
 | Collections, lazy iteration, bulk operations | [`rules/collections.md`](rules/collections.md) |
 | Blade components, attributes, composers | [`rules/blade-views.md`](rules/blade-views.md) |
 | Environment values and application configuration | [`rules/config.md`](rules/config.md) |
-| Tests: coverage, factories, fakes, and assertions | the `testing-best-practices` skill |
+| Tests: coverage, factories, fakes, and assertions | the `testing-best-practices` guide |
 | Naming, helpers, file boundaries, PHP style | [`rules/style.md`](rules/style.md) |
 | Actions, services, dependencies, application structure | [`rules/architecture.md`](rules/architecture.md) |
 

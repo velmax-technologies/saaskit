@@ -1,23 +1,15 @@
----
-name: testing-best-practices
-description: "Laravel test design and review. Use when selecting coverage, naming or structuring tests, choosing assertions or test data, isolating dependencies, testing HTTP or security boundaries, improving suite performance, or reviewing test value. Use framework guidance or search-docs for Pest and PHPUnit syntax."
-license: MIT
-metadata:
-  author: laravel
----
-
 # Testing Best Practices
 
-This skill provides rules for designing Laravel tests. Each rule file explains what to do and why. Use `search-docs` for Laravel API syntax. Fetch the PHPUnit 12.5.38 documentation at `https://phpunit.de/documentation.html` for PHPUnit API syntax.
+This guide provides rules for designing Laravel tests. Each rule file explains what to do and why. Verify Laravel and PHPUnit API syntax against the official documentation for the versions installed in this project.
 This project uses PHPUnit. Follow the corresponding guidance in each rule.
 
 ## Consistency First
 
 Read nearby tests before you choose syntax and organization.
 
-A pattern repeated throughout the project is a convention, and project conventions take precedence over this skill. Follow them and give new tests the same structure.
+A pattern repeated throughout the project is a convention, and project conventions take precedence over this guide. Follow them and give new tests the same structure.
 
-These rules govern the tests you write now. An existing test that follows a project convention is not defective merely because it conflicts with this skill. Do not delete or rewrite it. If the convention has drawbacks, explain them and let the user decide.
+These rules govern the tests you write now. An existing test that follows a project convention is not defective merely because it conflicts with this guide. Do not delete or rewrite it. If the convention has drawbacks, explain them and let the user decide.
 
 ## What to Test
 

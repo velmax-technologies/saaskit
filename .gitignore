@@ -14,3 +14,6 @@ tmp/
 /app/boost.json.pre-saaskit-cleanup
 /app/.claude/skills/deploying-to-cloud/
 /app/.claude/skills/infer-conventions/
+
+# Local backup created during AI tooling cleanup
+/app/boost.json.pre-chatgpt-cleanup
