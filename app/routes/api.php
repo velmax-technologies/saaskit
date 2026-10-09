@@ -27,6 +27,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/', [OrganizationController::class, 'store']);
         Route::get('/{organization}/members', [OrganizationController::class, 'members']);
     Route::post('/{organization}/members', [OrganizationController::class, 'storeMember']);
+    Route::patch('/{organization}/members/{membership}', [OrganizationController::class, 'updateMember']);
     });
 
     Route::middleware([

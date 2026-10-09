@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreOrganizationMemberRequest;
 use App\Http\Requests\Api\V1\StoreOrganizationRequest;
+use App\Http\Requests\Api\V1\UpdateOrganizationMemberRequest;
 use App\Http\Resources\Api\V1\MembershipResource;
 use App\Http\Resources\Api\V1\OrganizationResource;
 use App\Models\Membership;
@@ -63,6 +64,25 @@ class OrganizationController extends Controller
                 'member' => new MembershipResource($membership),
             ],
             201,
+        );
+    }
+
+    public function updateMember(
+        UpdateOrganizationMemberRequest $request,
+        Organization $organization,
+        Membership $membership,
+    ): JsonResponse {
+        $membership->update([
+            'role' => $request->validated('role'),
+        ]);
+
+        $membership->load(['organization', 'user']);
+
+        return ApiResponse::success(
+            'Organization member role updated successfully.',
+            [
+                'member' => new MembershipResource($membership),
+            ],
         );
     }
 

@@ -476,4 +476,159 @@ class OrganizationTest extends TestCase
                 'slug' => 'other-organization',
             ]);
     }
+
+    public function test_owner_can_update_member_role_using_public_membership_id(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+                ['role' => Organization::ROLE_ADMIN],
+            )
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.member.id', $membership->public_id)
+            ->assertJsonPath('data.member.role', Organization::ROLE_ADMIN)
+            ->assertJsonMissingPath('data.member.database_id');
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $member->id,
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+    }
+
+    public function test_admin_can_update_regular_member_role(): void
+    {
+        $admin = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+                ['role' => Organization::ROLE_ADMIN],
+            )
+            ->assertOk()
+            ->assertJsonPath('data.member.role', Organization::ROLE_ADMIN);
+    }
+
+    public function test_regular_member_cannot_update_membership_role(): void
+    {
+        $actor = User::factory()->create();
+        $target = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($actor, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+        $organization->users()->attach($target, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $target->id)
+            ->firstOrFail();
+
+        $this->actingAs($actor, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+                ['role' => Organization::ROLE_ADMIN],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $target->id,
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+    }
+
+    public function test_owner_role_cannot_be_assigned_through_member_role_endpoint(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $organization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+                ['role' => Organization::ROLE_OWNER],
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['role']);
+    }
+
+    public function test_membership_from_another_organization_cannot_be_updated(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = Organization::factory()->create();
+        $otherOrganization = Organization::factory()->create();
+
+        $organization->users()->attach($owner, [
+            'role' => Organization::ROLE_OWNER,
+        ]);
+        $otherOrganization->users()->attach($member, [
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+
+        $membership = Membership::query()
+            ->where('organization_id', $otherOrganization->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson(
+                "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
+                ['role' => Organization::ROLE_ADMIN],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $otherOrganization->id,
+            'user_id' => $member->id,
+            'role' => Organization::ROLE_MEMBER,
+        ]);
+    }
 }
