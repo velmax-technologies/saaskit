@@ -423,6 +423,89 @@ class OrganizationInvitationApiTest extends TestCase
         )->assertUnauthorized();
     }
 
+    public function test_owner_can_resend_invitation_and_rotate_its_token(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $organization = $this->createOrganizationWithRole($owner, Organization::ROLE_OWNER);
+        $oldToken = 'previous-valid-invitation-token';
+        $invitation = $this->createInvitation(
+            $organization,
+            $owner,
+            'invitee@example.com',
+            Organization::ROLE_MEMBER,
+            $oldToken,
+        );
+        $oldHash = $invitation->token_hash;
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
+            ->assertOk()
+            ->assertJsonMissingPath('data.invitation.token_hash');
+
+        $invitation->refresh();
+        $this->assertNotSame($oldHash, $invitation->token_hash);
+        $this->assertTrue($invitation->expires_at->isFuture());
+
+        $newToken = null;
+        Notification::assertSentOnDemand(
+            OrganizationInvitationNotification::class,
+            function (OrganizationInvitationNotification $notification) use (&$newToken): bool {
+                $newToken = $notification->token;
+
+                return true;
+            },
+        );
+
+        $this->assertNotNull($newToken);
+        $this->assertNotSame($oldToken, $newToken);
+        $this->assertSame(hash('sha256', $newToken), $invitation->token_hash);
+    }
+
+    public function test_resend_reports_delivery_failure_and_keeps_invitation_pending(): void
+    {
+        $owner = User::factory()->create();
+        $organization = $this->createOrganizationWithRole($owner, Organization::ROLE_OWNER);
+        $invitation = $this->createInvitation(
+            $organization,
+            $owner,
+            'invitee@example.com',
+        );
+        Notification::swap(new class
+        {
+            public function route(...$arguments): never
+            {
+                throw new \RuntimeException('Simulated mail transport failure');
+            }
+        });
+        $this->actingAs($owner, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend",
+            )
+            ->assertServiceUnavailable()
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseHas('organization_invitations', [
+            'id' => $invitation->id,
+            'accepted_at' => null,
+            'revoked_at' => null,
+        ]);
+    }
+
+    public function test_regular_member_cannot_resend_invitation(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $organization = $this->createOrganizationWithRole($owner, Organization::ROLE_OWNER);
+        $organization->users()->attach($member->id, ['role' => Organization::ROLE_MEMBER]);
+        $invitation = $this->createInvitation($organization, $owner, 'invitee@example.com');
+
+        $this->actingAs($member, 'sanctum')
+            ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
+            ->assertForbidden();
+    }
+
     private function createOrganizationWithRole(
         User $user,
         string $role,

@@ -37,6 +37,7 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/{organization}', [OrganizationController::class, 'destroy']);
         Route::get('/{organization}/invitations', [OrganizationInvitationController::class, 'index']);
         Route::post('/{organization}/invitations', [OrganizationInvitationController::class, 'store']);
+        Route::post('/{organization}/invitations/{invitation}/resend', [OrganizationInvitationController::class, 'resend']);
         Route::delete('/{organization}/invitations/{invitation}', [OrganizationInvitationController::class, 'destroy']);
         Route::get('/{organization}/members', [OrganizationController::class, 'members']);
         Route::post('/{organization}/members', [OrganizationController::class, 'storeMember']);

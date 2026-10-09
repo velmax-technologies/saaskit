@@ -13,8 +13,10 @@ use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Throwable;
 
 class OrganizationInvitationController extends Controller
 {
@@ -101,9 +103,13 @@ class OrganizationInvitationController extends Controller
 
         $invitation->load(['organization', 'inviter']);
 
-        Notification::route('mail', $email)->notify(
-            new OrganizationInvitationNotification($invitation, $token),
-        );
+        if (! $this->deliverInvitation($invitation, $token)) {
+            return ApiResponse::error(
+                'The invitation was saved, but the email could not be sent. Retry using the resend endpoint.',
+                ['invitation_id' => $invitation->public_id],
+                503,
+            );
+        }
 
         return ApiResponse::success(
             'Organization invitation created successfully.',
@@ -111,6 +117,52 @@ class OrganizationInvitationController extends Controller
                 'invitation' => new OrganizationInvitationResource($invitation),
             ],
             201,
+        );
+    }
+
+    public function resend(
+        Request $request,
+        Organization $organization,
+        OrganizationInvitation $invitation,
+    ): JsonResponse {
+        $this->authorizeInvitationManagement($request, $organization);
+
+        abort_unless(
+            $invitation->organization_id === $organization->getKey(),
+            404,
+        );
+
+        if (
+            $invitation->accepted_at !== null
+            || $invitation->revoked_at !== null
+        ) {
+            return ApiResponse::error(
+                'Only unaccepted, non-revoked invitations can be resent.',
+                [],
+                422,
+            );
+        }
+
+        $token = Str::random(64);
+
+        $invitation->update([
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $invitation->load(['organization', 'inviter']);
+
+        if (! $this->deliverInvitation($invitation, $token)) {
+            return ApiResponse::error(
+                'The invitation was updated, but the email could not be sent. Retry the resend request.',
+                ['invitation_id' => $invitation->public_id],
+                503,
+            );
+        }
+
+        return ApiResponse::success(
+            'Organization invitation resent successfully.',
+            ['invitation' => new OrganizationInvitationResource($invitation)],
         );
     }
 
@@ -151,5 +203,43 @@ class OrganizationInvitationController extends Controller
         $invitation->update(['revoked_at' => now()]);
 
         return ApiResponse::success('Organization invitation revoked successfully.');
+    }
+
+    private function authorizeInvitationManagement(
+        Request $request,
+        Organization $organization,
+    ): void {
+        abort_unless(
+            $request->user()
+                ->organizations()
+                ->whereKey($organization->getKey())
+                ->wherePivotIn('role', [
+                    Organization::ROLE_OWNER,
+                    Organization::ROLE_ADMIN,
+                ])
+                ->exists(),
+            403,
+        );
+    }
+
+    private function deliverInvitation(
+        OrganizationInvitation $invitation,
+        string $token,
+    ): bool {
+        try {
+            Notification::route('mail', $invitation->email)->notify(
+                new OrganizationInvitationNotification($invitation, $token),
+            );
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::error('Organization invitation email delivery failed.', [
+                'invitation_id' => $invitation->public_id,
+                'organization_id' => $invitation->organization->public_id,
+                'exception' => $exception::class,
+            ]);
+
+            return false;
+        }
     }
 }
