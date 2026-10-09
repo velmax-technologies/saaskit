@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AcceptOrganizationInvitationController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationInvitationController;
+use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Support\Api\ApiAbility;
 use App\Support\Api\ApiResponse;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,11 @@ Route::prefix('v1')->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
+
+        // Password reset endpoints are public; reset tokens authorize the change.
+        Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
+        Route::post('/reset-password', [PasswordResetController::class, 'reset']);
+
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout']);
