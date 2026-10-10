@@ -152,6 +152,64 @@ class AuthTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
+    public function test_login_is_limited_after_five_failed_attempts(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'login-limit@example.com',
+            'password' => 'password123',
+        ]);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertUnprocessable()->assertJsonValidationErrors(['email']);
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])
+            ->assertStatus(429)
+            ->assertHeader('Retry-After')
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Too many login attempts. Please try again later.');
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_successful_login_clears_failed_login_attempts(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'login-reset-limit@example.com',
+            'password' => 'password123',
+        ]);
+
+        for ($attempt = 0; $attempt < 4; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ])->assertOk();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertStatus(429);
+    }
+
     public function test_me_requires_authentication(): void
     {
         $this->getJson('/api/v1/me')

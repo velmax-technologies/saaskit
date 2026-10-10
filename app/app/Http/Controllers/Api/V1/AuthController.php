@@ -11,6 +11,7 @@ use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -45,13 +46,32 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $rateLimitKey = 'auth-login:'.hash(
+            'sha256',
+            strtolower(trim($validated['email'])).'|'.$request->ip(),
+        );
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many login attempts. Please try again later.',
+                'errors' => null,
+            ], 429, [
+                'Retry-After' => (string) max(1, RateLimiter::availableIn($rateLimitKey)),
+            ]);
+        }
+
         $user = User::where('email', $validated['email'])->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            RateLimiter::hit($rateLimitKey, 60);
+
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
+
+        RateLimiter::clear($rateLimitKey);
 
         $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
 
