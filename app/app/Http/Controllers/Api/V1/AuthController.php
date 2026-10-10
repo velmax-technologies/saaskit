@@ -80,7 +80,7 @@ class AuthController extends Controller
 
         $token = $user->createToken(
             'api',
-            [ApiAbility::PROFILE_READ],
+            ApiAbility::standard(),
             now()->addDays(config('sanctum.token_expiration_days')),
         )->plainTextToken;
 
