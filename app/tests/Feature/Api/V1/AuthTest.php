@@ -173,6 +173,28 @@ class AuthTest extends TestCase
         );
     }
 
+    public function test_unverified_user_can_login(): void
+    {
+        $user = User::factory()->unverified()->create([
+            'email' => 'unverified-login@example.com',
+            'password' => 'password123',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.email', $user->email)
+            ->assertJsonPath('data.token_type', 'Bearer');
+
+        $this->assertNull($user->fresh()->email_verified_at);
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+    }
+
     public function test_login_token_uses_configured_expiration_days(): void
     {
         config(['sanctum.token_expiration_days' => 3]);
@@ -293,6 +315,21 @@ class AuthTest extends TestCase
                 'message' => 'Invalid ability provided.',
                 'errors' => null,
             ]);
+    }
+
+    public function test_unverified_user_can_view_me_with_profile_read_ability(): void
+    {
+        $user = User::factory()->unverified()->create();
+        $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.id', $user->public_id)
+            ->assertJsonPath('data.user.email', $user->email);
+
+        $this->assertNull($user->fresh()->email_verified_at);
     }
 
     public function test_authenticated_user_can_view_me(): void

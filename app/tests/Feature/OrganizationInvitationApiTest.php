@@ -305,6 +305,42 @@ class OrganizationInvitationApiTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_unverified_user_cannot_accept_an_invitation(): void
+    {
+        $owner = User::factory()->create();
+        $invitee = User::factory()->unverified()->create([
+            'email' => 'unverified-invitee@example.com',
+        ]);
+        $organization = $this->createOrganizationWithRole(
+            $owner,
+            Organization::ROLE_OWNER,
+        );
+
+        $token = 'valid-invitation-token-for-testing';
+        $invitation = $this->createInvitation(
+            $organization,
+            $owner,
+            $invitee->email,
+            Organization::ROLE_MEMBER,
+            $token,
+        );
+
+        $this->actingAs($invitee, 'sanctum')
+            ->postJson(
+                "/api/v1/invitations/{$invitation->public_id}/accept",
+                ['token' => $token],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $invitee->id,
+        ]);
+
+        $this->assertNull($invitation->fresh()->accepted_at);
+        $this->assertNull($invitee->fresh()->email_verified_at);
+    }
+
     public function test_invitation_can_be_accepted_by_matching_email(): void
     {
         $owner = User::factory()->create();
