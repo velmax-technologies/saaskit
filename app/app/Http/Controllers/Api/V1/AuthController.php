@@ -25,6 +25,7 @@ class AuthController extends Controller
         ]);
 
         $user = User::create($validated);
+        $user->sendEmailVerificationNotification();
 
         $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
 
@@ -82,6 +83,21 @@ class AuthController extends Controller
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
+        );
+    }
+
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
+
+        return ApiResponse::success(
+            $user->hasVerifiedEmail()
+                ? 'Email address is already verified.'
+                : 'Email verification link sent.'
         );
     }
 

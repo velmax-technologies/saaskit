@@ -78,6 +78,32 @@ class OrganizationInvitationApiTest extends TestCase
         );
     }
 
+    public function test_admin_cannot_invite_a_user_as_an_admin(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create();
+        $organization = $this->createOrganizationWithRole(
+            $admin,
+            Organization::ROLE_ADMIN,
+        );
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/invitations",
+                [
+                    'email' => 'new-admin@example.com',
+                    'role' => Organization::ROLE_ADMIN,
+                ],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('organization_invitations', [
+            'organization_id' => $organization->id,
+            'email' => 'new-admin@example.com',
+        ]);
+    }
+
     public function test_non_admin_member_cannot_manage_invitations(): void
     {
         $owner = User::factory()->create();

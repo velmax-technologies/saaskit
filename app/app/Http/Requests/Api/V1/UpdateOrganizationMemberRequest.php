@@ -34,7 +34,8 @@ class UpdateOrganizationMemberRequest extends FormRequest
         }
 
         return $actorMembership->pivot->role === Organization::ROLE_ADMIN
-            && $membership->role === Organization::ROLE_MEMBER;
+            && $membership->role === Organization::ROLE_MEMBER
+            && $this->input('role') !== Organization::ROLE_ADMIN;
     }
 
     /**

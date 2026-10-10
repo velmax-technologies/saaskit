@@ -12,15 +12,27 @@ class StoreOrganizationInvitationRequest extends FormRequest
     {
         $organization = $this->route('organization');
 
-        return $organization instanceof Organization
-            && $this->user()
-                ->organizations()
-                ->whereKey($organization->getKey())
-                ->wherePivotIn('role', [
-                    Organization::ROLE_OWNER,
-                    Organization::ROLE_ADMIN,
-                ])
-                ->exists();
+        if (! $organization instanceof Organization) {
+            return false;
+        }
+
+        $membership = $this->user()
+            ->organizations()
+            ->whereKey($organization->getKey())
+            ->first();
+
+        if (! $membership ||
+            ! in_array($membership->pivot->role, [
+                Organization::ROLE_OWNER,
+                Organization::ROLE_ADMIN,
+            ], true)) {
+            return false;
+        }
+
+        return ! (
+            $membership->pivot->role === Organization::ROLE_ADMIN
+            && $this->input('role', Organization::ROLE_MEMBER) === Organization::ROLE_ADMIN
+        );
     }
 
     public function rules(): array
