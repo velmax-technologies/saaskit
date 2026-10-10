@@ -4,7 +4,10 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
 use App\Support\Api\ApiAbility;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -53,6 +56,25 @@ class AuthTest extends TestCase
         );
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
+    }
+
+    public function test_registration_sends_email_verification_notification(): void
+    {
+        Notification::fake();
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Unverified User',
+            'email' => 'unverified@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $user = User::query()
+            ->where('email', 'unverified@example.com')
+            ->firstOrFail();
+
+        $this->assertNull($user->email_verified_at);
+        Notification::assertSentTo($user, VerifyEmail::class);
     }
 
     public function test_registration_rejects_duplicate_email(): void
@@ -398,4 +420,70 @@ class AuthTest extends TestCase
             'id' => $otherToken->accessToken->id,
         ]);
     }
+
+    public function test_user_can_verify_email_with_a_valid_signed_link(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(30),
+            [
+                'id' => $user->getKey(),
+                'hash' => sha1($user->getEmailForVerification()),
+            ],
+        );
+
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertNotNull($user->fresh()->email_verified_at);
+    }
+
+    public function test_email_verification_rejects_a_tampered_signed_link(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(30),
+            [
+                'id' => $user->getKey(),
+                'hash' => sha1($user->getEmailForVerification()),
+            ],
+        );
+
+        $this->getJson($url.'&tampered=1')->assertForbidden();
+
+        $this->assertNull($user->fresh()->email_verified_at);
+    }
+
+    public function test_unverified_user_can_request_another_verification_email(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/auth/email/verification-notification')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_verified_user_does_not_receive_another_verification_email(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/auth/email/verification-notification')
+            ->assertOk();
+
+        Notification::assertNothingSentTo($user, VerifyEmail::class);
+    }
+
 }

@@ -13,6 +13,15 @@ class OrganizationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_unverified_user_cannot_access_organization_routes(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/organizations')
+            ->assertForbidden();
+    }
+
     public function test_organizations_require_authentication(): void
     {
         $this->getJson('/api/v1/organizations')
@@ -233,7 +242,33 @@ class OrganizationTest extends TestCase
         $this->assertStringStartsWith('mem_', $membership->public_id);
     }
 
-    public function test_admin_can_add_an_organization_member(): void
+    public function test_admin_cannot_add_an_admin_membership(): void
+    {
+        $admin = User::factory()->create();
+        $target = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $organization->users()->attach($admin, [
+            'role' => Organization::ROLE_ADMIN,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/members",
+                [
+                    'user_id' => $target->public_id,
+                    'role' => Organization::ROLE_ADMIN,
+                ],
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $target->id,
+        ]);
+    }
+
+    public function test_admin_can_add_a_regular_organization_member(): void
     {
         $admin = User::factory()->create();
         $member = User::factory()->create();
@@ -243,19 +278,13 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_ADMIN,
         ]);
 
-        $response = $this->actingAs($admin, 'sanctum')
+        $this->actingAs($admin, 'sanctum')
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
-                [
-                    'user_id' => $member->public_id,
-                    'role' => Organization::ROLE_ADMIN,
-                ],
-            );
-
-        $response
+                ['user_id' => $member->public_id],
+            )
             ->assertCreated()
-            ->assertJsonPath('data.member.user.id', $member->public_id)
-            ->assertJsonPath('data.member.role', Organization::ROLE_ADMIN);
+            ->assertJsonPath('data.member.role', Organization::ROLE_MEMBER);
     }
 
     public function test_regular_member_cannot_add_an_organization_member(): void
@@ -513,7 +542,7 @@ class OrganizationTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_update_regular_member_role(): void
+    public function test_admin_cannot_promote_regular_member_to_admin(): void
     {
         $admin = User::factory()->create();
         $member = User::factory()->create();
@@ -536,8 +565,13 @@ class OrganizationTest extends TestCase
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_ADMIN],
             )
-            ->assertOk()
-            ->assertJsonPath('data.member.role', Organization::ROLE_ADMIN);
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('organization_user', [
+            'organization_id' => $organization->id,
+            'user_id' => $member->id,
+            'role' => Organization::ROLE_MEMBER,
+        ]);
     }
 
     public function test_admin_cannot_update_another_admin_role(): void

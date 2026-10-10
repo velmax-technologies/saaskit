@@ -9,11 +9,26 @@ class StoreOrganizationMemberRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()
+        $organization = $this->route('organization');
+
+        if (! $organization) {
+            return false;
+        }
+
+        $membership = $this->user()
             ->organizations()
-            ->whereKey($this->route('organization')->getKey())
-            ->wherePivotIn('role', ['owner', 'admin'])
-            ->exists();
+            ->whereKey($organization->getKey())
+            ->first();
+
+        if (! $membership ||
+            ! in_array($membership->pivot->role, ['owner', 'admin'], true)) {
+            return false;
+        }
+
+        return ! (
+            $membership->pivot->role === 'admin'
+            && $this->input('role', 'member') === 'admin'
+        );
     }
 
     /**
