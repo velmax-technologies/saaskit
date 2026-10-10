@@ -232,6 +232,79 @@ class OrganizationInvitationApiTest extends TestCase
         $this->assertNotNull($invitation->fresh()->revoked_at);
     }
 
+    public function test_owner_cannot_revoke_an_invitation_from_another_organization(): void
+    {
+        $owner = User::factory()->create();
+        $otherOwner = User::factory()->create();
+
+        $organization = $this->createOrganizationWithRole(
+            $owner,
+            Organization::ROLE_OWNER,
+        );
+        $otherOrganization = $this->createOrganizationWithRole(
+            $otherOwner,
+            Organization::ROLE_OWNER,
+        );
+
+        $invitation = $this->createInvitation(
+            $otherOrganization,
+            $otherOwner,
+            'invitee@example.com',
+        );
+        $originalRevokedAt = $invitation->revoked_at;
+
+        $this->actingAs($owner, 'sanctum')
+            ->deleteJson(
+                "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}",
+            )
+            ->assertNotFound();
+
+        $this->assertSame(
+            $originalRevokedAt,
+            $invitation->fresh()->revoked_at,
+        );
+    }
+
+    public function test_owner_cannot_resend_an_invitation_from_another_organization(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $otherOwner = User::factory()->create();
+
+        $organization = $this->createOrganizationWithRole(
+            $owner,
+            Organization::ROLE_OWNER,
+        );
+        $otherOrganization = $this->createOrganizationWithRole(
+            $otherOwner,
+            Organization::ROLE_OWNER,
+        );
+
+        $invitation = $this->createInvitation(
+            $otherOrganization,
+            $otherOwner,
+            'invitee@example.com',
+        );
+        $originalTokenHash = $invitation->token_hash;
+        $originalExpiresAt = $invitation->expires_at->toDateTimeString();
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson(
+                "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend",
+            )
+            ->assertNotFound();
+
+        $invitation->refresh();
+
+        $this->assertSame($originalTokenHash, $invitation->token_hash);
+        $this->assertSame(
+            $originalExpiresAt,
+            $invitation->expires_at->toDateTimeString(),
+        );
+        Notification::assertNothingSent();
+    }
+
     public function test_invitation_can_be_accepted_by_matching_email(): void
     {
         $owner = User::factory()->create();
