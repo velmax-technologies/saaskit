@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\User;
+use App\Support\Api\ApiAbility;
 use App\Notifications\OrganizationInvitationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -24,7 +25,7 @@ class OrganizationInvitationApiTest extends TestCase
             Organization::ROLE_OWNER,
         );
 
-        $response = $this->actingAs($owner, 'sanctum')->postJson(
+        $response = $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)->postJson(
             "/api/v1/organizations/{$organization->public_id}/invitations",
             [
                 'email' => 'Invitee@Example.com',
@@ -88,7 +89,7 @@ class OrganizationInvitationApiTest extends TestCase
             Organization::ROLE_ADMIN,
         );
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations",
                 [
@@ -117,7 +118,7 @@ class OrganizationInvitationApiTest extends TestCase
             'role' => Organization::ROLE_MEMBER,
         ]);
 
-        $this->actingAs($member, 'sanctum')
+        $this->withToken($member->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations",
                 ['email' => 'invitee@example.com'],
@@ -143,7 +144,7 @@ class OrganizationInvitationApiTest extends TestCase
             'invitee@example.com',
         );
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->getJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations",
             )
@@ -172,7 +173,7 @@ class OrganizationInvitationApiTest extends TestCase
             'invitee@example.com',
         );
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations",
                 ['email' => 'INVITEE@example.com'],
@@ -198,7 +199,7 @@ class OrganizationInvitationApiTest extends TestCase
             'role' => Organization::ROLE_MEMBER,
         ]);
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations",
                 ['email' => $member->email],
@@ -222,7 +223,7 @@ class OrganizationInvitationApiTest extends TestCase
             'invitee@example.com',
         );
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}",
             )
@@ -253,7 +254,7 @@ class OrganizationInvitationApiTest extends TestCase
         );
         $originalRevokedAt = $invitation->revoked_at;
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}",
             )
@@ -289,7 +290,7 @@ class OrganizationInvitationApiTest extends TestCase
         $originalTokenHash = $invitation->token_hash;
         $originalExpiresAt = $invitation->expires_at->toDateTimeString();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend",
             )
@@ -325,7 +326,7 @@ class OrganizationInvitationApiTest extends TestCase
             $token,
         );
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => $token],
@@ -361,7 +362,7 @@ class OrganizationInvitationApiTest extends TestCase
             $token,
         );
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => $token],
@@ -399,7 +400,7 @@ class OrganizationInvitationApiTest extends TestCase
             'correct-invitation-token',
         );
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => 'incorrect-invitation-token-with-enough-length'],
@@ -429,7 +430,7 @@ class OrganizationInvitationApiTest extends TestCase
             $token,
         );
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => $token],
@@ -461,7 +462,7 @@ class OrganizationInvitationApiTest extends TestCase
 
         $invitation->update(['expires_at' => now()->subMinute()]);
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => $token],
@@ -493,7 +494,7 @@ class OrganizationInvitationApiTest extends TestCase
 
         $invitation->update(['revoked_at' => now()]);
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => $token],
@@ -528,7 +529,7 @@ class OrganizationInvitationApiTest extends TestCase
 
         $invitation->update(['accepted_at' => now()]);
 
-        $this->actingAs($invitee, 'sanctum')
+        $this->withToken($invitee->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/invitations/{$invitation->public_id}/accept",
                 ['token' => $token],
@@ -574,7 +575,7 @@ class OrganizationInvitationApiTest extends TestCase
         );
         $oldHash = $invitation->token_hash;
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
             ->assertOk()
             ->assertJsonMissingPath('data.invitation.token_hash');
@@ -614,7 +615,7 @@ class OrganizationInvitationApiTest extends TestCase
                 throw new \RuntimeException('Simulated mail transport failure');
             }
         });
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend",
             )
@@ -636,7 +637,7 @@ class OrganizationInvitationApiTest extends TestCase
         $organization->users()->attach($member->id, ['role' => Organization::ROLE_MEMBER]);
         $invitation = $this->createInvitation($organization, $owner, 'invitee@example.com');
 
-        $this->actingAs($member, 'sanctum')
+        $this->withToken($member->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
             ->assertForbidden();
     }
@@ -651,7 +652,7 @@ class OrganizationInvitationApiTest extends TestCase
         $invitation->update(['accepted_at' => now()]);
         $originalHash = $invitation->token_hash;
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
             ->assertUnprocessable();
 
@@ -669,7 +670,7 @@ class OrganizationInvitationApiTest extends TestCase
         $invitation->update(['revoked_at' => now()]);
         $originalHash = $invitation->token_hash;
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
             ->assertUnprocessable();
 
@@ -694,7 +695,7 @@ class OrganizationInvitationApiTest extends TestCase
         $invitation->update(['expires_at' => now()->subMinute()]);
         $oldHash = $invitation->token_hash;
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson("/api/v1/organizations/{$organization->public_id}/invitations/{$invitation->public_id}/resend")
             ->assertOk();
 

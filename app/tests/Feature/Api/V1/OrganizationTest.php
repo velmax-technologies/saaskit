@@ -5,8 +5,8 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
+use App\Support\Api\ApiAbility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class OrganizationTest extends TestCase
@@ -17,7 +17,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->unverified()->create();
 
-        $this->actingAs($user, 'sanctum')
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->getJson('/api/v1/organizations')
             ->assertForbidden();
     }
@@ -26,7 +26,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->unverified()->create();
 
-        $this->actingAs($user, 'sanctum')
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson('/api/v1/organizations', [
                 'name' => 'Unverified Workspace',
             ])
@@ -50,7 +50,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user, 'sanctum')
+        $response = $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson('/api/v1/organizations', [
                 'name' => 'Public ID Test Organization',
             ]);
@@ -83,7 +83,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $response = $this->actingAs($user, 'sanctum')
+        $response = $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->getJson('/api/v1/organizations');
 
         $response->assertOk()
@@ -103,7 +103,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $response = $this->postJson('/api/v1/organizations', [
             'name' => 'Acme Inc.',
@@ -129,7 +129,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $this->postJson('/api/v1/organizations', [
             'name' => 'Acme Inc.',
@@ -143,7 +143,7 @@ class OrganizationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $this->postJson('/api/v1/organizations', [])
             ->assertUnprocessable()
@@ -158,7 +158,7 @@ class OrganizationTest extends TestCase
 
         $user = User::factory()->create();
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $this->postJson('/api/v1/organizations', [
             'name' => 'Another Acme',
@@ -184,7 +184,7 @@ class OrganizationTest extends TestCase
             ],
         ]);
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $response = $this->getJson(
             '/api/v1/organizations/'.$organization->public_id.'/members',
@@ -229,7 +229,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $response = $this->actingAs($owner, 'sanctum')
+        $response = $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 [
@@ -266,7 +266,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_ADMIN,
         ]);
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 [
@@ -292,7 +292,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_ADMIN,
         ]);
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 ['user_id' => $member->public_id],
@@ -311,7 +311,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_MEMBER,
         ]);
 
-        $response = $this->actingAs($existingMember, 'sanctum')
+        $response = $this->withToken($existingMember->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 [
@@ -351,7 +351,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $response = $this->actingAs($owner, 'sanctum')
+        $response = $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 [
@@ -374,7 +374,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $response = $this->actingAs($owner, 'sanctum')
+        $response = $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 [
@@ -406,7 +406,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_MEMBER,
         ]);
 
-        $response = $this->actingAs($owner, 'sanctum')
+        $response = $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->postJson(
                 "/api/v1/organizations/{$organization->public_id}/members",
                 [
@@ -441,7 +441,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $this->getJson(
             '/api/v1/organizations/'.$organization->public_id.'/members',
@@ -466,7 +466,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $response = $this->getJson(
             '/api/v1/organizations/'.$organization->public_id.'/members',
@@ -503,7 +503,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        Sanctum::actingAs($user);
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken);
 
         $response = $this->getJson('/api/v1/organizations');
 
@@ -538,7 +538,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_ADMIN],
@@ -574,7 +574,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_ADMIN],
@@ -606,7 +606,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $otherAdmin->id)
             ->firstOrFail();
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_MEMBER],
@@ -638,7 +638,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $target->id)
             ->firstOrFail();
 
-        $this->actingAs($actor, 'sanctum')
+        $this->withToken($actor->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_ADMIN],
@@ -670,7 +670,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_OWNER],
@@ -698,7 +698,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
                 ['role' => Organization::ROLE_ADMIN],
@@ -724,7 +724,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson("/api/v1/organizations/{$organization->public_id}", [
                 'name' => 'New Name',
                 'slug' => 'new-name',
@@ -755,7 +755,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson("/api/v1/organizations/{$organization->public_id}", [
                 'name' => 'Updated Name',
             ])
@@ -773,7 +773,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_ADMIN,
         ]);
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson("/api/v1/organizations/{$organization->public_id}", [
                 'name' => 'Unauthorized Change',
             ])
@@ -790,7 +790,7 @@ class OrganizationTest extends TestCase
         $user = User::factory()->create();
         $organization = Organization::factory()->create();
 
-        $this->actingAs($user, 'sanctum')
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson("/api/v1/organizations/{$organization->public_id}", [
                 'name' => 'Unauthorized Change',
             ])
@@ -814,7 +814,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson("/api/v1/organizations/{$organization->public_id}", [
                 'slug' => 'taken-slug',
             ])
@@ -831,7 +831,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson("/api/v1/organizations/{$organization->public_id}", [
                 'slug' => 'invalid slug!',
             ])
@@ -854,7 +854,7 @@ class OrganizationTest extends TestCase
 
         $organizationId = $organization->id;
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}")
             ->assertOk()
             ->assertJsonPath('success', true)
@@ -886,7 +886,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_ADMIN,
         ]);
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}")
             ->assertForbidden();
 
@@ -900,7 +900,7 @@ class OrganizationTest extends TestCase
         $user = User::factory()->create();
         $organization = Organization::factory()->create();
 
-        $this->actingAs($user, 'sanctum')
+        $this->withToken($user->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}")
             ->assertForbidden();
 
@@ -939,7 +939,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/ownership",
                 ['membership_id' => $targetMembership->public_id],
@@ -984,7 +984,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/ownership",
                 ['membership_id' => $targetMembership->public_id],
@@ -1021,7 +1021,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $target->id)
             ->firstOrFail();
 
-        $this->actingAs($member, 'sanctum')
+        $this->withToken($member->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/ownership",
                 ['membership_id' => $targetMembership->public_id],
@@ -1064,7 +1064,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $otherMember->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/ownership",
                 ['membership_id' => $targetMembership->public_id],
@@ -1098,7 +1098,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $owner->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/ownership",
                 ['membership_id' => $ownerMembership->public_id],
@@ -1121,7 +1121,7 @@ class OrganizationTest extends TestCase
             'role' => Organization::ROLE_OWNER,
         ]);
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->patchJson(
                 "/api/v1/organizations/{$organization->public_id}/ownership",
                 ['membership_id' => '123'],
@@ -1144,7 +1144,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
             ->assertOk()
             ->assertJsonPath('success', true);
@@ -1166,7 +1166,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
             ->assertOk();
 
@@ -1191,7 +1191,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $otherAdmin->id)
             ->firstOrFail();
 
-        $this->actingAs($admin, 'sanctum')
+        $this->withToken($admin->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson(
                 "/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}",
             )
@@ -1218,7 +1218,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $target->id)
             ->firstOrFail();
 
-        $this->actingAs($actor, 'sanctum')
+        $this->withToken($actor->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
             ->assertForbidden();
 
@@ -1237,7 +1237,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $owner->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
             ->assertForbidden();
 
@@ -1259,7 +1259,7 @@ class OrganizationTest extends TestCase
             ->where('user_id', $member->id)
             ->firstOrFail();
 
-        $this->actingAs($owner, 'sanctum')
+        $this->withToken($owner->createToken('test-token', ApiAbility::standard())->plainTextToken)
             ->deleteJson("/api/v1/organizations/{$organization->public_id}/members/{$membership->public_id}")
             ->assertForbidden();
 
