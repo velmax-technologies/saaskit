@@ -22,6 +22,20 @@ class OrganizationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_unverified_owner_cannot_provision_an_organization_workspace(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/organizations', [
+                'name' => 'Unverified Workspace',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('organizations', 0);
+        $this->assertDatabaseCount('organization_user', 0);
+    }
+
     public function test_organizations_require_authentication(): void
     {
         $this->getJson('/api/v1/organizations')
