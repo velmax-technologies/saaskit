@@ -5,6 +5,17 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
+$tokenExpirationDays = filter_var(
+    env('SANCTUM_TOKEN_EXPIRATION_DAYS', 7),
+    FILTER_VALIDATE_INT,
+);
+
+if ($tokenExpirationDays === false || $tokenExpirationDays < 1) {
+    throw new InvalidArgumentException(
+        'SANCTUM_TOKEN_EXPIRATION_DAYS must be a positive integer.'
+    );
+}
+
 return [
 
     /*
@@ -51,6 +62,18 @@ return [
     */
 
     'expiration' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Personal Access Token Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | Newly issued API bearer tokens expire after this many days. Set the
+    | environment variable to change the lifetime for a deployment.
+    |
+    */
+
+    'token_expiration_days' => $tokenExpirationDays,
 
     /*
     |--------------------------------------------------------------------------
