@@ -56,43 +56,54 @@ class OrganizationInvitationController extends Controller
         $email = mb_strtolower(trim($request->validated('email')));
         $role = $request->validated('role', Organization::ROLE_MEMBER);
 
-        $existingUser = User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->first();
-
-        if ($existingUser && $organization->users()->whereKey($existingUser->getKey())->exists()) {
-            return ApiResponse::error(
-                'This user is already a member of the organization.',
-                [],
-                422,
-            );
-        }
-
-        $pendingInvitationExists = $organization->invitations()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->whereNull('accepted_at')
-            ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
-            ->exists();
-
-        if ($pendingInvitationExists) {
-            return ApiResponse::error(
-                'A pending invitation already exists for this email.',
-                [],
-                422,
-            );
-        }
-
         $token = Str::random(64);
 
-        $invitation = DB::transaction(function () use (
+        $result = DB::transaction(function () use (
             $organization,
             $request,
             $email,
             $role,
             $token,
-        ): OrganizationInvitation {
-            return $organization->invitations()->create([
+        ): OrganizationInvitation|JsonResponse {
+            // Serialize invitation creation for this organization.
+            $lockedOrganization = Organization::query()
+                ->whereKey($organization->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $existingUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->first();
+
+            if (
+                $existingUser
+                && $lockedOrganization->users()
+                    ->whereKey($existingUser->getKey())
+                    ->exists()
+            ) {
+                return ApiResponse::error(
+                    'This user is already a member of the organization.',
+                    [],
+                    422,
+                );
+            }
+
+            $pendingInvitationExists = $lockedOrganization->invitations()
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->whereNull('accepted_at')
+                ->whereNull('revoked_at')
+                ->where('expires_at', '>', now())
+                ->exists();
+
+            if ($pendingInvitationExists) {
+                return ApiResponse::error(
+                    'A pending invitation already exists for this email.',
+                    [],
+                    422,
+                );
+            }
+
+            return $lockedOrganization->invitations()->create([
                 'invited_by' => $request->user()->getKey(),
                 'email' => $email,
                 'token_hash' => hash('sha256', $token),
@@ -101,6 +112,11 @@ class OrganizationInvitationController extends Controller
             ]);
         });
 
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        $invitation = $result;
         $invitation->load(['organization', 'inviter']);
 
         if (! $this->deliverInvitation($invitation, $token)) {
