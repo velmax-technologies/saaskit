@@ -56,6 +56,15 @@ class AuthTest extends TestCase
         );
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
+
+        $accessToken = $createdUser->tokens()->sole();
+
+        $this->assertNotNull($accessToken->expires_at);
+        $this->assertEqualsWithDelta(
+            $accessToken->created_at->copy()->addDays(7)->timestamp,
+            $accessToken->expires_at->timestamp,
+            2,
+        );
     }
 
     public function test_registration_sends_email_verification_notification(): void
@@ -153,6 +162,39 @@ class AuthTest extends TestCase
         );
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
+
+        $accessToken = $user->tokens()->sole();
+
+        $this->assertNotNull($accessToken->expires_at);
+        $this->assertEqualsWithDelta(
+            $accessToken->created_at->copy()->addDays(7)->timestamp,
+            $accessToken->expires_at->timestamp,
+            2,
+        );
+    }
+
+    public function test_login_token_uses_configured_expiration_days(): void
+    {
+        config(['sanctum.token_expiration_days' => 3]);
+
+        $user = User::factory()->create([
+            'email' => 'config-expiry@example.com',
+            'password' => 'password123',
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ])->assertOk();
+
+        $accessToken = $user->tokens()->sole();
+
+        $this->assertNotNull($accessToken->expires_at);
+        $this->assertEqualsWithDelta(
+            $accessToken->created_at->copy()->addDays(3)->timestamp,
+            $accessToken->expires_at->timestamp,
+            2,
+        );
     }
 
     public function test_invalid_credentials_are_rejected(): void
@@ -271,6 +313,20 @@ class AuthTest extends TestCase
             (string) $user->id,
             $response->json('data.user.id'),
         );
+    }
+
+    public function test_expired_api_token_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('expired', [ApiAbility::PROFILE_READ]);
+
+        $token->accessToken->forceFill([
+            'expires_at' => now()->subMinute(),
+        ])->save();
+
+        $this->withToken($token->plainTextToken)
+            ->getJson('/api/v1/me')
+            ->assertUnauthorized();
     }
 
     public function test_api_token_contains_profile_read_ability(): void

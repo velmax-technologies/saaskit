@@ -27,7 +27,11 @@ class AuthController extends Controller
         $user = User::create($validated);
         $user->sendEmailVerificationNotification();
 
-        $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
+        $token = $user->createToken(
+            'api',
+            [ApiAbility::PROFILE_READ],
+            now()->addDays(config('sanctum.token_expiration_days')),
+        )->plainTextToken;
 
         return ApiResponse::success(
             'Registration successful.',
@@ -74,7 +78,11 @@ class AuthController extends Controller
 
         RateLimiter::clear($rateLimitKey);
 
-        $token = $user->createToken('api', [ApiAbility::PROFILE_READ])->plainTextToken;
+        $token = $user->createToken(
+            'api',
+            [ApiAbility::PROFILE_READ],
+            now()->addDays(config('sanctum.token_expiration_days')),
+        )->plainTextToken;
 
         return ApiResponse::success(
             'Login successful.',
